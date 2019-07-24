@@ -243,6 +243,7 @@ declare module 'tone' {
     on<Z extends V>(event: Z, callback: (...args: T[Z]) => void): this;
     once<Z extends V>(event: Z, callback: (...arg: T[Z]) => void): this;
     off<Z extends V>(event: Z, callback: (...arg: T[Z]) => void): this;
+    dispose(): void;
   }
 
   class Envelope extends Tone {
@@ -903,11 +904,15 @@ declare module 'tone' {
 
   class TickSource extends Tone {
     frequency: TickSignal;
+    ticks: number;
+    seconds: number;
     start(time?: PrimitiveTime, offset?: PrimitiveTicks): this;
     pause(time?: PrimitiveTime): void;
     stop(time: PrimitiveTime): this;
+    getTimeOfTick(ticks: PrimitiveTicks, before?: PrimitiveTime): this;
+    getSecondsAtTime(time: PrimitiveTime): PrimitiveTicks;
     getTicksAtTime(time: PrimitiveTime): PrimitiveTicks;
-    setTicksAtTime(time: PrimitiveTime, offset: PrimitiveTicks): this;
+    setTicksAtTime(ticks: PrimitiveTicks, time: PrimitiveTime): this;
     forEachTickBetween(startTime: PrimitiveTime, endTime: PrimitiveTime, callback: (time: number, ticks: number) => void): this;
     dispose(): void;
   }
@@ -933,7 +938,7 @@ declare module 'tone' {
     dispose(): void;
   }
 
-  class TimelineState<T extends { state: TransportState, time: Time }> extends Timeline<T> {
+  class TimelineState<T extends { state: TransportState, time: number }> extends Timeline<T> {
     constructor(initial: TransportState);
     cancel(time: number): this;
     setStateAtTime(state: TransportState, time: number): this;
