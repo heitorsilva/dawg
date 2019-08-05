@@ -1,7 +1,7 @@
 import { Component, Vue, Prop } from 'vue-property-decorator';
 import { CreateElement } from 'vue';
 import { Watch } from '@/modules/update';
-import * as events from '@/base/events';
+import * as events from '@/events';
 
 export interface PaletteOptions {
   /**
@@ -11,12 +11,13 @@ export interface PaletteOptions {
   placeholder?: string;
 }
 
-interface PaletteEvents {
-  show: (items: DetailedItem[], opts?: PaletteOptions) => void;
-  cancel: () => void;
-  select: (text: string) => void;
-  focus: (text: string) => void;
-}
+// tslint:disable-next-line:interface-over-type-literal
+type PaletteEvents = {
+  show: [DetailedItem[], PaletteOptions],
+  cancel: [];
+  select: [string];
+  focus: [string];
+};
 
 export const paletteEvents = events.emitter<PaletteEvents>();
 

@@ -17,7 +17,7 @@ import { applicationContext } from '@/dawg/extensions/core/application-context';
 import { ui } from '@/base/ui';
 import { addEventListener } from '@/utils';
 import { log } from '@/dawg/extensions/core/log';
-import { emitter } from '@/base/events';
+import { emitter } from '@/events';
 
 export interface InitializationError {
   type: 'error';
@@ -30,7 +30,7 @@ export interface InitializationSuccess {
   project: Project;
 }
 
-const events = emitter<{ save: (encoded: IProject) => void }>();
+const events = emitter<{ save: [IProject] }>();
 
 const projectApi = (context: IExtensionContext) => {
   // tslint:disable-next-line:variable-name

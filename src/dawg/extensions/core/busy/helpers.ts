@@ -1,17 +1,9 @@
-import StrictEventEmitter from 'strict-event-emitter-types';
-import { EventEmitter } from 'events';
-import * as events from '@/base/events';
-
-interface Events {
-  start: (provider: Provider) => void;
-}
-
-export const bus: StrictEventEmitter<EventEmitter, Events> = new EventEmitter();
+import * as events from '@/events';
 
 export class Provider {
   public progress: number | null = null;
   private disposed = false;
-  private emitter = events.emitter<{ dispose: (provider: Provider) => void }>();
+  private emitter = events.emitter<{ dispose: [Provider] }>();
 
   constructor(public message: string | null, public estimate: number | null) {
     this.updateProgress();

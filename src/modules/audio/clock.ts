@@ -1,9 +1,11 @@
 import Tone from 'tone';
 import { Time, Ticks } from '@/modules/audio/types';
+import { Emitter } from '@/modules/audio/emitter';
+import { mergeObjects } from '@/modules/audio/checks';
 
 interface Options {
-  'callback'?: () => void;
-  'frequency'?: number;
+  callback?: () => void;
+  frequency?: number;
 }
 
 const defaults = {
@@ -13,20 +15,7 @@ const defaults = {
   frequency: 1,
 };
 
-const merge = <T extends {}>(b: Required<T>, a?: T) => {
-  const result: any = {};
-  for (const key of Object.keys(b) as Array<keyof T>) {
-    if (!a || a[key] === undefined) {
-      result[key] = b[key];
-    } else {
-      result[key] = a[key];
-    }
-  }
-
-  return result as Required<T>;
-};
-
-export class Clock extends Tone.Emitter<{ start: [number, number], stop: [number], pause: [number] }> {
+export class Clock extends Emitter<{ start: [number, number], stop: [number], pause: [number] }> {
   public callback: (time: Time, ticks: Ticks) => void;
   // tslint:disable-next-line:variable-name
   private _nextTick = 0;
@@ -39,13 +28,14 @@ export class Clock extends Tone.Emitter<{ start: [number, number], stop: [number
   // tslint:disable-next-line:variable-name
   private _boundLoop: () => void;
   // tslint:disable-next-line:member-ordering
-  public readonly frequency = this._tickSource.frequency;
+  public readonly frequency: Tone.TickSignal;
 
   constructor(opts?: Options) {
     super();
-    const options = merge(defaults, opts);
+    const options = mergeObjects(defaults, opts);
     this.callback = options.callback;
     this._tickSource = new Tone.TickSource(options.frequency);
+    this.frequency = this._tickSource.frequency;
 
     // add an initial state
     this._state.setStateAtTime('stopped', 0);
@@ -206,7 +196,7 @@ export class Clock extends Tone.Emitter<{ start: [number, number], stop: [number
 
   /**
    *  Clean up
-   *  @returns {Tone.Clock} this
+   *  @returns this
    */
   public dispose() {
     super.dispose();
@@ -220,6 +210,7 @@ export class Clock extends Tone.Emitter<{ start: [number, number], stop: [number
     // this.callback = null;
     this._state.dispose();
     // this._state = null;
+    return this;
   }
 
   /**

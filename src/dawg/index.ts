@@ -30,7 +30,7 @@ export { Key } from '@/base/keyboard';
 import { helpLinks } from '@/dawg/extensions/core/help-links';
 
 import * as platform from '@/base/platform';
-import * as events from '@/base/events';
+import * as events from '@/events';
 
 export {
   events,
