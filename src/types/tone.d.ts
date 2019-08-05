@@ -927,6 +927,8 @@ declare module 'tone' {
   class Timeline<T extends { time: Time | number }> extends Tone {
     length: number;
     memory: number;
+    peek(): T;
+    shift(): T;
     cancel(time: number): this;
     add(event: T): void;
     get(time: number, comparator?: keyof T): T;

@@ -1,7 +1,7 @@
 import Tone from 'tone';
 import { Time, ContextTime } from '@/modules/audio/types';
 import { Source } from '@/modules/audio/source/source';
-import { context } from '@/modules/audio/context';
+import { context } from '@/modules/audio/Context';
 import * as soundfonts from 'soundfont-player';
 
 

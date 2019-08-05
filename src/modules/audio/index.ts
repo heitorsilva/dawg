@@ -6,4 +6,4 @@ export { Source } from '@/modules/audio/source/source';
 export * from '@/modules/audio/source/soundfont';
 export * from '@/modules/audio/source/synth';
 export { Player } from '@/modules/audio/player';
-export { context } from '@/modules/audio/context';
+export { context } from '@/modules/audio/Context';

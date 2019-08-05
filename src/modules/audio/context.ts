@@ -12,7 +12,7 @@ import { mergeObjects } from '@/modules/audio/checks';
 
 interface Options {
   clockSource: 'worker';
-  latencyHint: 'interactive';
+  latencyHint: LatencyHit;
   lookAhead: number;
   updateInterval: number;
 }
@@ -26,16 +26,19 @@ const defaults: Options = {
 
 type LatencyHit = 'interactive' | 'playback' | 'balanced' | 'fastest';
 
-export class Context extends Emitter<{  }> {
+export class Context extends Emitter<{ tick: [], statechange: [Event], close: [] }> {
   public rawContext = new AudioContext();
+  // tslint:disable-next-line:variable-name
   private _latencyHit: LatencyHit;
   private lookAhead: number;
   private computedUpdateInterval = 0;
   private ticker: Ticker;
-  private _timeouts = new Tone.Timeline();
+  // tslint:disable-next-line:variable-name
+  private _timeouts = new Tone.Timeline<{ time: number, callback: () => void, id: number }>();
+  // tslint:disable-next-line:variable-name
   private _timeoutIds = 0;
 
-  constructor(opts: Partial<Options>) {
+  constructor(opts?: Partial<Options>) {
     super();
 
     const options = mergeObjects(defaults, opts);
@@ -62,19 +65,16 @@ export class Context extends Emitter<{  }> {
      *  @private
      *  @type  {Ticker}
      */
-    this.ticker = new Ticker(this.emit.bind(this, 'tick'), options.clockSource, options.updateInterval);
-
-    /**
-     *  The timeout id counter
-     *  @private
-     *  @type {Number}
-     */
-    this.
+    this.ticker = new Ticker(
+      options.clockSource,
+      options.updateInterval,
+      this.emit.bind(this, 'tick'),
+    );
 
     this.on('tick', this._timeoutLoop.bind(this));
 
     // forward state change events
-    this.context.onstatechange = (e) => {
+    this.rawContext.onstatechange = (e) => {
       this.emit('statechange', e);
     };
   }
@@ -84,7 +84,7 @@ export class Context extends Emitter<{  }> {
    *  @return  {Number}
    */
   public now() {
-    return this.context.currentTime + this.lookAhead;
+    return this.rawContext.currentTime + this.lookAhead;
   }
 
   /**
@@ -94,7 +94,7 @@ export class Context extends Emitter<{  }> {
    */
   get destination() {
     if (!this.master) {
-      return this.context.destination;
+      return this.rawContext.destination;
     } else {
       return this.master;
     }
@@ -106,8 +106,8 @@ export class Context extends Emitter<{  }> {
    *  @return  {Promise}
    */
   public resume() {
-    if (this._context.state === 'suspended' && this._context instanceof AudioContext) {
-      return this._context.resume();
+    if (this.rawContext.state === 'suspended') {
+      return this.rawContext.resume();
     } else {
       return Promise.resolve();
     }
@@ -121,9 +121,9 @@ export class Context extends Emitter<{  }> {
   public close() {
     let closePromise = Promise.resolve();
     // never close the global Tone.Context
-    if (this !== Tone.global.TONE_AUDIO_CONTEXT) {
-      closePromise = this.rawContext.close();
-    }
+    // if (this !== Tone.global.TONE_AUDIO_CONTEXT) {
+    closePromise = this.rawContext.close();
+    // }
     return closePromise.then(() => {
       this.emit('close', this);
     });
@@ -134,25 +134,25 @@ export class Context extends Emitter<{  }> {
    *  @param  {Number}  val
    *  @return  {BufferSourceNode}
    */
-  public getConstant(val: number) {
-    if (this._constants[val]) {
-      return this._constants[val];
-    } else {
-      const buffer = this._context.createBuffer(1, 128, this._context.sampleRate);
-      const arr = buffer.getChannelData(0);
-      for (let i = 0; i < arr.length; i++) {
-        arr[i] = val;
-      }
-      const constant = this._context.createBufferSource();
-      constant.channelCount = 1;
-      constant.channelCountMode = 'explicit';
-      constant.buffer = buffer;
-      constant.loop = true;
-      constant.start(0);
-      this._constants[val] = constant;
-      return constant;
-    }
-  }
+  // public getConstant(val: number) {
+  //   if (this._constants[val]) {
+  //     return this._constants[val];
+  //   } else {
+  //     const buffer = this._context.createBuffer(1, 128, this._context.sampleRate);
+  //     const arr = buffer.getChannelData(0);
+  //     for (let i = 0; i < arr.length; i++) {
+  //       arr[i] = val;
+  //     }
+  //     const constant = this._context.createBufferSource();
+  //     constant.channelCount = 1;
+  //     constant.channelCountMode = 'explicit';
+  //     constant.buffer = buffer;
+  //     constant.loop = true;
+  //     constant.start(0);
+  //     this._constants[val] = constant;
+  //     return constant;
+  //   }
+  // }
 
   /**
    *  A setTimeout which is gaurenteed by the clock source.
@@ -161,13 +161,13 @@ export class Context extends Emitter<{  }> {
    *  @param  {Seconds}    timeout  The timeout in seconds
    *  @returns {Number} ID to use when invoking Tone.Context.clearTimeout
    */
-  public setTimeout(fn, timeout) {
+  public setTimeout(fn: () => void, timeout: number) {
     this._timeoutIds++;
     const now = this.now();
     this._timeouts.add({
-      callback : fn,
-      time : now + timeout,
-      id : this._timeoutIds,
+      callback: fn,
+      time: now + timeout,
+      id: this._timeoutIds,
     });
     return this._timeoutIds;
   }
@@ -177,8 +177,8 @@ export class Context extends Emitter<{  }> {
    *  @param  {Number}  id  The ID returned from setTimeout
    *  @return  {Tone.Context}  this
    */
-  public clearTimeout(id) {
-    this._timeouts.forEach(function(event) {
+  public clearTimeout(id: number) {
+    this._timeouts.forEach((event) => {
       if (event.id === id) {
         this.remove(event);
       }
@@ -192,6 +192,8 @@ export class Context extends Emitter<{  }> {
    *  @returns {Promise} this
    */
   public dispose() {
+    super.dispose();
+    return this;
     // return this.close().then(function(){
     //   Tone.Emitter.prototype.dispose.call(this);
     //   this._ticker.dispose();
@@ -211,7 +213,7 @@ export class Context extends Emitter<{  }> {
    */
   private _timeoutLoop() {
     const now = this.now();
-    while (this._timeouts && this._timeouts.length && this._timeouts.peek().time <= now) {
+    while (this._timeouts.length && this._timeouts.peek().time <= now) {
       this._timeouts.shift().callback();
     }
   }
@@ -273,18 +275,18 @@ export class Context extends Emitter<{  }> {
     switch (hint) {
       case 'interactive' :
         lookAhead = 0.1;
-        this.context.latencyHint = hint;
+        this.rawContext.latencyHint = hint;
         break;
       case 'playback' :
         lookAhead = 0.8;
-        this.context.latencyHint = hint;
+        this.rawContext.latencyHint = hint;
         break;
       case 'balanced' :
         lookAhead = 0.25;
-        this.context.latencyHint = hint;
+        this.rawContext.latencyHint = hint;
         break;
       case 'fastest' :
-        this.context.latencyHint = 'interactive';
+        this.rawContext.latencyHint = 'interactive';
         lookAhead = 0.01;
         break;
     }
@@ -300,7 +302,9 @@ class Ticker {
   private timeout: NodeJS.Timeout | null = null;
 
   constructor(
+    // tslint:disable-next-line:variable-name
     private _type: WorkerType,
+    // tslint:disable-next-line:variable-name
     private _updateInterval: number,
     private callback: () => void,
   ) {
