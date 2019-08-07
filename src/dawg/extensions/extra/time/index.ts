@@ -8,6 +8,7 @@ export const extension = createExtension({
   id: 'dawg.time',
   activate() {
     const component = Vue.extend(createComponent({
+      name: 'TimeDisplayWrapper',
       components: { TimeDisplay },
       template: `
       <time-display

@@ -1,8 +1,8 @@
 import Tone from 'tone';
 import { Time, ContextTime } from '@/modules/audio/types';
 import { Source } from '@/modules/audio/source/source';
-import { context } from '@/modules/audio/context';
 import * as soundfonts from 'soundfont-player';
+import { Context } from '@/modules/audio/Context';
 
 
 // tslint:disable-next-line:no-empty-interface
@@ -17,7 +17,7 @@ export class Soundfont implements Source<SoundfontOptions> {
 
   public static load(name: soundfonts.InstrumentName) {
     try {
-      return new Soundfont(soundfonts.instrument(context, name));
+      return new Soundfont(soundfonts.instrument(Context.getRawContext(), name));
     } catch (e) {
       // tslint:disable-next-line:no-console
       console.warn(e.message);

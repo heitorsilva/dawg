@@ -30,7 +30,7 @@ export interface InitializationSuccess {
   project: Project;
 }
 
-const events = emitter<{ save: (encoded: IProject) => void }>();
+const events = emitter<{ save: [IProject] }>();
 
 const projectApi = (context: IExtensionContext) => {
   // tslint:disable-next-line:variable-name

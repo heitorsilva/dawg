@@ -4,7 +4,7 @@ import Transport from '@/modules/audio/transport';
 
 interface Event {
   state: Tone.TransportState;
-  time: Tone.Time;
+  time: number;
   duration: Time;
   offset?: Time;
 }

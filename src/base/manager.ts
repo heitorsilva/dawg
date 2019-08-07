@@ -18,7 +18,7 @@ import { value } from 'vue-function-api';
 import { PathReporter } from 'io-ts/lib/PathReporter';
 import { emitter } from '@/base/events';
 
-const events = emitter<{ setOpenedFile: () => void }>();
+const events = emitter<{ setOpenedFile: [] }>();
 
 // FIXME IF TWO instances of Vusic are opened at the same time
 // there will be an issue when writing to the fs because the

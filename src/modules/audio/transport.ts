@@ -1,5 +1,8 @@
 import Tone from 'tone';
 import { ContextTime, TransportTime, Time } from '@/modules/audio/types';
+import { Emitter } from '@/modules/audio/Emitter';
+import { Clock } from '@/modules/audio/Clock';
+import { Context } from '@/modules/audio/Context';
 
 // An interface doesn't work for some reason
 // tslint:disable-next-line:interface-over-type-literal
@@ -47,7 +50,7 @@ Tone.TransportRepeatEvent.prototype.invoke = function(time, ticks) {
 
 type Event = Tone.TransportEvent | Tone.TransportRepeatEvent;
 
-export default class Transport extends Tone.Emitter<Events> {
+export default class Transport extends Emitter<Events> {
   public loop = true;
   public timeline = new Tone.Timeline<Event>();
   public bpm: Tone.TickSignal;
@@ -61,7 +64,7 @@ export default class Transport extends Tone.Emitter<Events> {
   private _loopStart = 0;
   // tslint:disable-next-line:variable-name
   private _loopEnd = 0;
-  private clock = new Tone.Clock({
+  private clock = new Clock({
     callback: this.processTick.bind(this),
     frequency: 0,
   });
@@ -109,8 +112,7 @@ export default class Transport extends Tone.Emitter<Events> {
     startTime: TransportTime = 0,
     duration: Time = Infinity,
   ) {
-    // @ts-ignore
-    const event = new Tone.TransportRepeatEvent(this, {
+    const event = new Tone.TransportRepeatEvent(this as any, {
       callback,
       interval: new Tone.Time(interval),
       time: new Tone.TransportTime(startTime),
@@ -146,14 +148,14 @@ export default class Transport extends Tone.Emitter<Events> {
    */
   public start(time?: ContextTime, offset?: TransportTime) {
     if (offset !== undefined) {
-      offset = this.toTicks(offset!) as number;
+      offset = Context.toTicks(offset);
     }
 
     if (time === undefined) {
-      time = Tone.Transport.context.now();
+      time = Context.now();
     }
 
-    this.clock.start(time, offset);
+    this.clock.start(time, offset as any);
     return this;
   }
 
@@ -185,12 +187,12 @@ export default class Transport extends Tone.Emitter<Events> {
   }
 
   set loopStart(loopStart: number) {
-    this._loopStart = this.toTicks(loopStart);
-    this.seconds = this.toSeconds(loopStart);
+    this._loopStart = Context.toTicks(loopStart);
+    this.seconds = loopStart;
   }
 
   get seconds() {
-    return this.clock.seconds;
+    return this.clock.seconds.value;
   }
 
   set seconds(s: number) {
@@ -204,7 +206,7 @@ export default class Transport extends Tone.Emitter<Events> {
   }
 
   set loopEnd(loopEnd: number) {
-    this._loopEnd = this.toTicks(loopEnd);
+    this._loopEnd = Context.toTicks(loopEnd);
   }
 
   get ticks() {
@@ -280,6 +282,7 @@ export default class Transport extends Tone.Emitter<Events> {
   }
 
   private processTick(exact: ContextTime, ticks: number) {
+
     // do the loop test
     if (this.loop) {
       if (ticks >= this._loopEnd) {
@@ -290,6 +293,7 @@ export default class Transport extends Tone.Emitter<Events> {
         this.emit('loop', exact);
       }
     }
+
     // invoke the timeline events scheduled on this tick
     this.timeline.forEachAtTime(ticks, (event) => {
       event.invoke(exact, ticks);
