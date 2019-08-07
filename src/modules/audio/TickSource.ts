@@ -109,8 +109,8 @@ export class TickSource {
     time = Context.toSeconds(time);
     // cancel the previous stop
     if (this.timeline.getValueAtTime(time) === 'stopped') {
-      const event = this.timeline.get(time)!; // ToDO
-      if (event.time > 0) {
+      const event = this.timeline.get(time);
+      if (event && event.time > 0) {
         this.tickOffset.cancel(event.time);
         this.timeline.cancel(event.time);
       }
@@ -131,7 +131,11 @@ export class TickSource {
    */
   public getTicksAtTime(time: Time) {
     time = Context.toSeconds(time);
-    const stopEvent = this.timeline.getLastState('stopped', time)!; // TODO
+    const stopEvent = this.timeline.getLastState('stopped', time);
+    if (!stopEvent) {
+      return 0; // TODO
+    }
+
     // this event allows forEachBetween to iterate until the current time
     const tmpEvent = { state : literal('paused'), time };
     this.timeline.add(tmpEvent);
@@ -144,8 +148,8 @@ export class TickSource {
     this.timeline.forEachBetween(stopEvent.time, time + Context.sampleTime, (e) => {
       let periodStartTime = lastState.time;
       // if there is an offset event in this period use that
-      const offsetEvent = this.tickOffset.get(e.time)!; // TODO
-      if (offsetEvent.time >= lastState.time) {
+      const offsetEvent = this.tickOffset.get(e.time);
+      if (offsetEvent && offsetEvent.time >= lastState.time) {
         elapsedTicks = offsetEvent.ticks;
         periodStartTime = offsetEvent.time;
       }
@@ -169,7 +173,7 @@ export class TickSource {
    */
   public getSecondsAtTime(time: Time) {
     time = Context.toSeconds(time);
-    const stopEvent = this.timeline.getLastState('stopped', time)!; // TODO
+    const stopEvent = this.timeline.getLastState('stopped', time);
     // this event allows forEachBetween to iterate until the current time
     const tmpEvent = { state : literal('paused'), time };
     this.timeline.add(tmpEvent);
@@ -179,15 +183,16 @@ export class TickSource {
     let elapsedSeconds = 0;
 
     // iterate through all the events since the last stop
-    this.timeline.forEachBetween(stopEvent.time, time + Context.sampleTime, (e) => {
-      let periodStartTime = lastState.time;
+    const stopTime = stopEvent ? stopEvent.time : 0;
+    this.timeline.forEachBetween(stopTime, time + Context.sampleTime, (e) => {
+      let periodStartTime = lastState ? lastState.time : 0;
       // if there is an offset event in this period use that
       const offsetEvent = this.tickOffset.get(e.time)!; // TODO
-      if (offsetEvent.time >= lastState.time) {
+      if (offsetEvent.time >= (lastState ? lastState.time : 0)) {
         elapsedSeconds = offsetEvent.seconds;
         periodStartTime = offsetEvent.time;
       }
-      if (lastState.state === 'started' && e.state !== 'started') {
+      if (lastState && lastState.state === 'started' && e.state !== 'started') {
         elapsedSeconds += e.time - periodStartTime;
       }
       lastState = e;
@@ -207,18 +212,18 @@ export class TickSource {
   ) {
 
     // only iterate through the sections where it is "started"
-    let lastStateEvent = this.timeline.get(startTime)!; // TODO
+    let lastStateEvent = this.timeline.get(startTime);
     this.timeline.forEachBetween(startTime, endTime, (event) => {
-      if (lastStateEvent.state === 'started' && event.state !== 'started') {
+      if (lastStateEvent && lastStateEvent.state === 'started' && event.state !== 'started') {
         this.forEachTickBetween(Math.max(lastStateEvent.time, startTime), event.time - Context.sampleTime, callback);
       }
       lastStateEvent = event;
     });
 
-    startTime = Math.max(lastStateEvent.time, startTime);
+    startTime = lastStateEvent ? Math.max(lastStateEvent.time, startTime) : startTime;
 
     let error = null;
-    if (lastStateEvent.state === 'started' && this.timeline) {
+    if (lastStateEvent && lastStateEvent.state === 'started' && this.timeline) {
       // figure out the difference between the frequency ticks and the
       const startTicks = this.frequency.getTicksAtTime(startTime);
       const ticksAtStart = this.frequency.getTicksAtTime(lastStateEvent.time);
