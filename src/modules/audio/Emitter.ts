@@ -11,4 +11,8 @@ export class Emitter<E extends Events> {
   public once = this.emitter.once;
   // tslint:disable-next-line:member-ordering
   public emit = this.emitter.emit;
+
+  public dispose() {
+    this.emitter.removeAllListeners();
+  }
 }

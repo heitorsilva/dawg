@@ -1,7 +1,9 @@
 import Tone from 'tone';
-import { computed } from 'vue-function-api';
 import { TransportTime } from '@/modules/audio';
 import { ContextTime } from '@/modules/audio/types';
+import { Emitter } from '@/modules/audio/Emitter';
+
+type Comparator<T> = 'time' | ((e: T) => number | Tone.Time);
 
 /**
  *  @class A Timeline class for scheduling and maintaining state
@@ -10,20 +12,22 @@ import { ContextTime } from '@/modules/audio/types';
  *         retrieval.
  *  @param {Positive} [memory=Infinity] The number of previous events that are retained.
  */
-export class Timeline<T extends { time: Tone.Time | number }> {
+export class Timeline<T extends { time: Tone.Time | number; }> extends Emitter<{ add: [T], remove: [T] }> {
   protected timeline: T[] = [];
-  private length = computed(() => this.timeline.length);
 
-  // FIXME
-  private memory = Infinity;
+  constructor(private memory = Infinity) {
+    super();
+  }
 
   public add(event: T) {
     event.time = event.time.valueOf();
     const index = this.search(event.time);
     this.timeline.splice(index + 1, 0, event);
+    this.emit('add', event);
     // if the length is more than the memory, remove the previous ones
-    if (this.length.value > this.memory) {
-      const diff = this.length.value - this.memory;
+    if (this.timeline.length > this.memory) {
+      const diff = this.timeline.length - this.memory;
+      this.timeline.slice(0, diff).forEach((e) => this.emit('remove', e));
       this.timeline.splice(0, diff);
     }
     return this;
@@ -35,7 +39,7 @@ export class Timeline<T extends { time: Tone.Time | number }> {
    *  @param  {String}  comparator Which value in the object to compare
    *  @returns {Object} The event object set after that time.
    */
-  public get(time: TransportTime, comparator: 'time' = 'time') {
+  public get(time: TransportTime, comparator?: Comparator<T>) {
     const index = this.search(time, comparator);
     if (index !== -1) {
       return this.timeline[index];
@@ -44,9 +48,64 @@ export class Timeline<T extends { time: Tone.Time | number }> {
     }
   }
 
+  /**
+   *  Get the event before the event at the given time.
+   *  @param  {Number}  time  The time to query.
+   *  @param  {String}  comparator Which value in the object to compare
+   *  @returns {Object} The event object before the given time
+   */
+  public getBefore(time: ContextTime, comparator: Comparator<T> = 'time') {
+    if (typeof comparator === 'string') {
+      comparator = (e) => e.time;
+    }
+
+    const len = this.timeline.length;
+    // if it's after the last item, return the last item
+    if (len > 0 && comparator(this.timeline[len - 1]) < time) {
+      return this.timeline[len - 1];
+    }
+
+    const index = this.search(time, comparator);
+    if (index - 1 >= 0) {
+      return this.timeline[index - 1];
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   *  Get the event which is scheduled after the given time.
+   *  @param  {Number}  time  The time to query.
+   *  @param  {String}  comparator Which value in the object to compare
+   *  @returns {Object} The event object after the given time
+   */
+  public getAfter(time: ContextTime, comparator?: Comparator<T>) {
+    const index = this.search(time, comparator);
+    if (index + 1 < this.timeline.length) {
+      return this.timeline[index + 1];
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Returns the previous event if there is one. null otherwise
+   * @param  {Object} event The event to find the previous one of
+   * @return {Object}       The event right before the given event
+   */
+  public previousEvent(event: T) {
+    const index = this.timeline.indexOf(event);
+    if (index > 0) {
+      return this.timeline[index - 1];
+    } else {
+      return null;
+    }
+  }
+
   public cancel(after: ContextTime) {
+    let index = 0;
     if (this.timeline.length > 1) {
-      let index = this.search(after);
+      index = this.search(after);
       if (index >= 0) {
         if (this.timeline[index].time === after) {
           // get the first item with that time
@@ -57,19 +116,25 @@ export class Timeline<T extends { time: Tone.Time | number }> {
               break;
             }
           }
-          this.timeline = this.timeline.slice(0, index);
         } else {
-          this.timeline = this.timeline.slice(0, index + 1);
+          index = index + 1;
         }
       } else {
-        this.timeline = [];
+        index = 0;
       }
+
     } else if (this.timeline.length === 1) {
       // the first item's time
       if (this.timeline[0].time >= after) {
-        this.timeline = [];
+        index = 0;
+      } else {
+        index = 1;
       }
     }
+
+    this.timeline.slice(index, this.timeline.length).forEach((e) => this.emit('remove', e));
+    this.timeline = this.timeline.slice(0, index);
+
     return this;
   }
 
@@ -81,6 +146,7 @@ export class Timeline<T extends { time: Tone.Time | number }> {
   public remove(event: T) {
     const index = this.timeline.indexOf(event);
     if (index !== -1) {
+      this.emit('remove', this.timeline[index]);
       this.timeline.splice(index, 1);
     }
     return this;
@@ -112,17 +178,20 @@ export class Timeline<T extends { time: Tone.Time | number }> {
    *  @param  {Number}  time
    *  @param  {String}  comparator Which value in the object to compare
    *  @return  {Number} the index in the timeline array
-   *  @private
    */
-  protected search(time: TransportTime, comparator: 'time' = 'time') {
+  protected search(time: TransportTime, comparator: Comparator<T> = 'time') {
     if (this.timeline.length === 0) {
       return -1;
+    }
+
+    if (typeof comparator === 'string') {
+      comparator = (e) => e.time;
     }
 
     let beginning = 0;
     const len = this.timeline.length;
     let end = len;
-    if (len > 0 && this.timeline[len - 1][comparator] <= time) {
+    if (len > 0 && comparator(this.timeline[len - 1]) <= time) {
       return len - 1;
     }
     while (beginning < end) {
@@ -130,18 +199,18 @@ export class Timeline<T extends { time: Tone.Time | number }> {
       let midPoint = Math.floor(beginning + (end - beginning) / 2);
       const event = this.timeline[midPoint];
       const nextEvent = this.timeline[midPoint + 1];
-      if (event[comparator] === time) {
+      if (comparator(event) === time) {
         // choose the last one that has the same time
         for (let i = midPoint; i < this.timeline.length; i++) {
           const testEvent = this.timeline[i];
-          if (testEvent[comparator] === time) {
+          if (comparator(testEvent) === time) {
             midPoint = i;
           }
         }
         return midPoint;
-      } else if (event[comparator] < time && nextEvent[comparator] > time) {
+      } else if (comparator(event) < time && comparator(nextEvent) > time) {
         return midPoint;
-      } else if (event[comparator] > time) {
+      } else if (comparator(event) > time) {
         // search lower
         end = midPoint;
       } else {

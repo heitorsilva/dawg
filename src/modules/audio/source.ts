@@ -120,7 +120,7 @@ export abstract class Source extends Tone.AudioNode {
     return this;
   }
 
-  public syncedStart(time: number, offset?: number) {
+  public syncedStart(time: number, offset: number) {
     if (offset === undefined) {
       return;
     }

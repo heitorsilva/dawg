@@ -1,18 +1,19 @@
 import Tone from 'tone';
-import { ContextTime, TransportTime, Time } from '@/modules/audio/types';
+import { ContextTime, TransportTime, Time, TransportSeconds } from '@/modules/audio/types';
 import { Emitter } from '@/modules/audio/Emitter';
 import { Clock } from '@/modules/audio/Clock';
 import { Context } from '@/modules/audio/Context';
+import { TickSignal } from '@/modules/audio/TickSignal';
 
 // An interface doesn't work for some reason
 // tslint:disable-next-line:interface-over-type-literal
 type Events = {
-  start: [number, number];
-  stop: [number];
-  pause: [number];
-  loopStart: [number, number];
-  loopEnd: [number];
-  loop: [number];
+  start: [ContextTime, TransportSeconds];
+  stop: [ContextTime];
+  pause: [ContextTime];
+  loopStart: [ContextTime, TransportSeconds];
+  loopEnd: [ContextTime];
+  loop: [ContextTime];
 };
 
 Tone.TransportRepeatEvent.prototype._createEvents = function(time) {
@@ -53,7 +54,7 @@ type Event = Tone.TransportEvent | Tone.TransportRepeatEvent;
 export default class Transport extends Emitter<Events> {
   public loop = true;
   public timeline = new Tone.Timeline<Event>();
-  public bpm: Tone.TickSignal;
+  public bpm: TickSignal;
   /**
    * Measured in ticks.
    */
@@ -74,14 +75,14 @@ export default class Transport extends Emitter<Events> {
     super();
 
     this.bpm = this.clock.frequency;
-    this.bpm._toUnits = this.toUnits.bind(this);
-    this.bpm._fromUnits = this.fromUnits.bind(this);
+    this.bpm.toUnits = this.toUnits.bind(this);
+    this.bpm.fromUnits = this.fromUnits.bind(this);
     this.bpm.value = 120;
 
 
-    this.clock.on('start', (time, offset) => {
-      offset = new Tone.Ticks(offset).toSeconds();
-      this.emit('start', time, offset);
+    this.clock.on('start', (time, ticks) => {
+      ticks = new Tone.Ticks(ticks).toSeconds();
+      this.emit('start', time, ticks);
     });
 
     this.clock.on('stop', (time) => {
@@ -210,12 +211,12 @@ export default class Transport extends Emitter<Events> {
   }
 
   get ticks() {
-    return this.clock.ticks;
+    return this.clock.ticks.value;
   }
 
 
   set ticks(t: number) {
-    if (this.clock.ticks !== t) {
+    if (this.clock.ticks.value !== t) {
       const now = Tone.Transport.context.now();
       // stop everything synced to the transport
       if (this.state === 'started') {
@@ -277,7 +278,7 @@ export default class Transport extends Emitter<Events> {
     return this.addEvent(event);
   }
 
-  public getSecondsAtTime(time: Time) {
+  public getSecondsAtTime(time: ContextTime) {
     return this.clock.getSecondsAtTime(time);
   }
 

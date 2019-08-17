@@ -1,6 +1,8 @@
-import Tone from 'tone';
+import Vue from 'vue';
+import { plugin } from 'vue-function-api';
+Vue.use(plugin);
+
 import { computed, Wrapper } from 'vue-function-api';
-import { Time } from '@/modules/audio/types';
 
 /**
  * Whether the Web Audio API is supported and Promises.

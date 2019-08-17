@@ -829,8 +829,7 @@ declare module 'tone' {
   }
 
   class SignalBase extends AudioNode {
-    // @ts-ignore
-    connect(node: AudioParam | AudioNode | Signal | Tone, outputNumber?: number, inputNumber?: number): SignalBase;
+    connect(node: AudioParam | AudioNode | Signal | Tone, outputNumber?: number, inputNumber?: number): this;
   }
 
   class Source extends AudioNode {

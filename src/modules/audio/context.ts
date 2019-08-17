@@ -1,18 +1,7 @@
 import Tone from 'tone';
-import { Emitter } from '@/modules/audio/Emitter';
-import { mergeObjects } from '@/modules/audio/utils';
-import { value } from 'vue-function-api';
 import { Time } from '@/modules/audio/types';
-
-interface Options {
-  lookAhead: number;
-  updateInterval: number;
-}
-
-const defaults: Options = {
-  lookAhead : 0.1,
-  updateInterval : 0.03,
-};
+import { emitter } from '@/base/events';
+import { Gain } from '@/modules/audio/Gain';
 
 class Ticker {
   private worker: Worker;
@@ -46,23 +35,32 @@ class Ticker {
   }
 }
 
-export class Context extends Emitter<{ tick: [], statechange: [Event], close: [] }> {
-  public static context = value(new Context());
+
+const events = emitter<{ tick: [], statechange: [Event], close: [] }>();
+const ticker = new Ticker(() => events.emit('tick'), 0.03); // updateInterval FIXME
+
+export class Context {
+  public static context = (Tone.context as any)._context as unknown as AudioContext;
+  public static lookAhead = 0.1;
 
   public static now() {
-    return Context.context.value.now();
+    return Context.context.currentTime + Context.lookAhead;
+  }
+
+  public static createGain() {
+    return new Gain(Context.context.createGain());
   }
 
   public static immediate() {
-    return Context.context.value.immediate();
-  }
-
-  public static resume() {
-    return Context.context.value.resume();
+    return Context.context.currentTime;
   }
 
   public static toTicks(time: Time) {
     return (new Tone.TransportTime(time)).toTicks();
+  }
+
+  public static createConstantSource() {
+    return Context.context.createConstantSource();
   }
 
   public static toSeconds(time: Time | undefined): number {
@@ -77,11 +75,40 @@ export class Context extends Emitter<{ tick: [], statechange: [Event], close: []
   }
 
   public static getRawContext() {
-    return Context.context.value.getRawContext();
+    return Context.context;
   }
 
   public static get sampleTime() {
-    return Context.context.value.sampleTime;
+    return 1 / Context.context.sampleRate;
+  }
+
+  public static decodeAudioData(audioData: ArrayBuffer) {
+    return Context.context.decodeAudioData(audioData);
+  }
+
+  public static createAnalyser() {
+    return Context.context.createAnalyser();
+  }
+
+  public static resume() {
+    if (Context.context.state === 'suspended') {
+      return Context.context.resume();
+    } else {
+      return Promise.resolve();
+    }
+  }
+
+  public static onDidTick(f: () => void) {
+    events.on('tick', f);
+    return {
+      dispose: () => {
+        events.off('tick', f);
+      },
+    };
+  }
+
+  public static dispose() {
+    ticker.dispose();
   }
 
   /**
@@ -95,53 +122,6 @@ export class Context extends Emitter<{ tick: [], statechange: [Event], close: []
    * document.querySelector('#playbutton').addEventListener('click', () => Tone.start())
    */
   public static start() {
-    Context.context.value.resume();
-  }
-
-  private context = (Tone.context as any)._context as unknown as AudioContext;
-  private ticker: Ticker;
-  private lookAhead: number;
-
-  constructor(opts?: Partial<Options>) {
-    super();
-    const options = mergeObjects(opts, defaults);
-    this.lookAhead = options.lookAhead;
-    this.ticker = new Ticker(this.emit.bind(this, 'tick'), options.updateInterval);
-  }
-
-  get sampleTime() {
-    return 1 / this.context.sampleRate;
-  }
-
-  public decodeAudioData(audioData: ArrayBuffer) {
-    return this.context.decodeAudioData(audioData);
-  }
-
-  public createAnalyser() {
-    return this.context.createAnalyser();
-  }
-
-  public now() {
-    return this.context.currentTime + this.lookAhead;
-  }
-
-  public immediate() {
-    return this.context.currentTime;
-  }
-
-  public resume() {
-    if (this.context.state === 'suspended') {
-      return this.context.resume();
-    } else {
-      return Promise.resolve();
-    }
-  }
-
-  public getRawContext() {
-    return this.context;
-  }
-
-  public dispose() {
-    this.ticker.dispose();
+    Context.context.resume();
   }
 }

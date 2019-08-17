@@ -22,7 +22,7 @@ export default createComponent({
   setup(props, context) {
     const width = 100;
     let ctx: CanvasRenderingContext2D | null = null;
-    const analyserNode = Audio.context.value.createAnalyser();
+    const analyserNode = Audio.context.createAnalyser();
     const analyserData = new Uint8Array(512);
     const output = (Tone.Master as any).output as AudioNode;
 

@@ -1,7 +1,6 @@
-import Tone from 'tone';
 import { Emitter } from '@/modules/audio/Emitter';
 import { mergeObjects, wrap } from '@/modules/audio/utils';
-import { Ticks, TransportTime, ContextTime } from '@/modules/audio/types';
+import { Ticks, ContextTime } from '@/modules/audio/types';
 import { Context } from '@/modules/audio/Context';
 import { TimelineState } from '@/modules/audio/TimelineState';
 import { TickSource } from '@/modules/audio/TickSource';
@@ -20,16 +19,20 @@ const defaults = {
   frequency: 1,
 };
 
-export class Clock extends Emitter<{ start: [number, number], stop: [number], pause: [number] }> {
+export class Clock extends Emitter<{ start: [ContextTime, Ticks], stop: [ContextTime], pause: [ContextTime] }> {
   private callback: Callback;
   private tickSource = new TickSource({ frequency: defaults.frequency });
   private timeline = new TimelineState('stopped');
   private lastUpdate = 0;
-  private boundLoop = this.loop.bind(this);
+  private disposer: { dispose: () => void };
 
   // tslint:disable
   public readonly seconds = wrap(this.tickSource, 'seconds');
+  public readonly ticks = wrap(this.tickSource, 'ticks');
   public readonly frequency = this.tickSource.frequency;
+  public readonly getTicksAtTime = this.tickSource.getTicksAtTime;
+  public readonly setTicksAtTime = this.tickSource.setTicksAtTime;
+  public readonly getSecondsAtTime = this.tickSource.getSecondsAtTime;
   // tslint:enable
 
   constructor(opts?: Options) {
@@ -40,24 +43,17 @@ export class Clock extends Emitter<{ start: [number, number], stop: [number], pa
     this.callback = options.callback;
 
     // bind a callback to the worker thread
-    Context.context.value.on('tick', this.boundLoop);
+    this.disposer = Context.onDidTick(this.loop.bind(this));
   }
 
   get state() {
     return this.timeline.getValueAtTime(Context.now());
   }
 
-  get ticks() {
-    return Math.ceil(this.getTicksAtTime(Context.now()));
-  }
-
-  set ticks(t: number) {
-    this.tickSource.ticks = t;
-  }
-
   public start(time?: ContextTime, offset?: Ticks) {
     // make sure the context is started
     Context.resume();
+
     // start the loop
     const seconds = Context.toSeconds(time);
     if (this.timeline.getValueAtTime(seconds) !== 'started') {
@@ -74,7 +70,7 @@ export class Clock extends Emitter<{ start: [number, number], stop: [number], pa
     return this;
   }
 
-  public pause(time?: TransportTime) {
+  public pause(time?: ContextTime) {
     time = Context.toSeconds(time);
     if (this.timeline.getValueAtTime(time) === 'started') {
       this.timeline.setStateAtTime({
@@ -90,7 +86,7 @@ export class Clock extends Emitter<{ start: [number, number], stop: [number], pa
     return this;
   }
 
-  public stop(time?: TransportTime) {
+  public stop(time?: ContextTime) {
     const seconds = Context.toSeconds(time);
     this.timeline.cancel(seconds);
     this.timeline.setStateAtTime({
@@ -104,21 +100,8 @@ export class Clock extends Emitter<{ start: [number, number], stop: [number], pa
     return this;
   }
 
-  public getTicksAtTime(time: TransportTime) {
-    return this.tickSource.getTicksAtTime(time);
-  }
-
-  public setTicksAtTime(ticks: Ticks, time: TransportTime) {
-    this.tickSource.setTicksAtTime(ticks, time);
-    return this;
-  }
-
-  public getSecondsAtTime(time: TransportTime) {
-    return this.tickSource.getSecondsAtTime(time);
-  }
-
   public dispose() {
-    Context.context.value.off('tick', this.boundLoop);
+    this.disposer.dispose();
     return this;
   }
 
@@ -135,8 +118,8 @@ export class Clock extends Emitter<{ start: [number, number], stop: [number], pa
     this.timeline.forEachBetween(startTime, endTime, (e) => {
       switch (e.state) {
         case 'started' :
-          const offset = this.tickSource.getTicksAtTime(e.time);
-          this.emit('start', e.time, offset);
+          const ticks = this.tickSource.getTicksAtTime(e.time);
+          this.emit('start', e.time, ticks);
           break;
         case 'stopped' :
           if (e.time !== 0) {

@@ -1,10 +1,10 @@
-import Tone from 'tone';
 import { mergeObjects } from '@/modules/audio/utils';
 import { TimelineState } from '@/modules/audio/TimelineState';
 import { Timeline } from '@/modules/audio/Timeline';
 import { ContextTime, Ticks, Time } from '@/modules/audio/types';
 import { Context } from '@/modules/audio/Context';
 import { literal } from '@/utils';
+import { TickSignal } from '@/modules/audio/TickSignal';
 
 interface TickSourceOptions {
   frequency: number;
@@ -20,13 +20,16 @@ interface TickSourceOptions {
  *  @param {Tone.Param=} param A parameter to control (such as playbackRate)
  */
 export class TickSource {
-  public readonly frequency: Tone.TickSignal;
+  public readonly frequency: TickSignal;
   private timeline = new TimelineState('stopped');
-  private tickOffset = new Timeline<{ time: number, ticks: number, seconds: number }>();
+
+  // This timeline records all of the times where the ticks we manually set
+  // For example, a user might set a position on the timeline or the transport might loop
+  private tickOffset = new Timeline<{ time: number, ticks: number }>();
 
   constructor(opts?: Partial<TickSourceOptions>) {
     const options = mergeObjects(opts, { frequency: 1 });
-    this.frequency = new Tone.TickSignal(options.frequency);
+    this.frequency = new TickSignal(options);
     this.setTicksAtTime(0, 0);
   }
 
@@ -105,7 +108,7 @@ export class TickSource {
    *  @example
    * clock.stop();
    */
-  public stop(time?: Time) {
+  public stop(time?: ContextTime) {
     time = Context.toSeconds(time);
     // cancel the previous stop
     if (this.timeline.getValueAtTime(time) === 'stopped') {
@@ -122,87 +125,6 @@ export class TickSource {
     });
     this.setTicksAtTime(0, time);
     return this;
-  }
-
-  /**
-   * Get the elapsed ticks at the given time
-   * @param time  When to get the tick value
-   * @return The number of ticks
-   */
-  public getTicksAtTime(time: Time) {
-    time = Context.toSeconds(time);
-    const stopEvent = this.timeline.getLastState('stopped', time);
-    if (!stopEvent) {
-      return 0; // TODO
-    }
-
-    // this event allows forEachBetween to iterate until the current time
-    const tmpEvent = { state : literal('paused'), time };
-    this.timeline.add(tmpEvent);
-
-    // keep track of the previous offset event
-    let lastState = stopEvent;
-    let elapsedTicks = 0;
-
-    // iterate through all the events since the last stop
-    this.timeline.forEachBetween(stopEvent.time, time + Context.sampleTime, (e) => {
-      let periodStartTime = lastState.time;
-      // if there is an offset event in this period use that
-      const offsetEvent = this.tickOffset.get(e.time);
-      if (offsetEvent && offsetEvent.time >= lastState.time) {
-        elapsedTicks = offsetEvent.ticks;
-        periodStartTime = offsetEvent.time;
-      }
-      if (lastState.state === 'started' && e.state !== 'started') {
-        elapsedTicks += this.frequency.getTicksAtTime(e.time) - this.frequency.getTicksAtTime(periodStartTime);
-      }
-      lastState = e;
-    });
-
-    // remove the temporary event
-    this.timeline.remove(tmpEvent);
-
-    // return the ticks
-    return elapsedTicks;
-  }
-
-  /**
-   *  Return the elapsed seconds at the given time.
-   *  @param  {Time}  time  When to get the elapsed seconds
-   *  @return  {Seconds}  The number of elapsed seconds
-   */
-  public getSecondsAtTime(time: Time) {
-    time = Context.toSeconds(time);
-    const stopEvent = this.timeline.getLastState('stopped', time);
-    // this event allows forEachBetween to iterate until the current time
-    const tmpEvent = { state : literal('paused'), time };
-    this.timeline.add(tmpEvent);
-
-    // keep track of the previous offset event
-    let lastState = stopEvent;
-    let elapsedSeconds = 0;
-
-    // iterate through all the events since the last stop
-    const stopTime = stopEvent ? stopEvent.time : 0;
-    this.timeline.forEachBetween(stopTime, time + Context.sampleTime, (e) => {
-      let periodStartTime = lastState ? lastState.time : 0;
-      // if there is an offset event in this period use that
-      const offsetEvent = this.tickOffset.get(e.time)!; // TODO
-      if (offsetEvent.time >= (lastState ? lastState.time : 0)) {
-        elapsedSeconds = offsetEvent.seconds;
-        periodStartTime = offsetEvent.time;
-      }
-      if (lastState && lastState.state === 'started' && e.state !== 'started') {
-        elapsedSeconds += e.time - periodStartTime;
-      }
-      lastState = e;
-    });
-
-    // remove the temporary event
-    this.timeline.remove(tmpEvent);
-
-    // return the ticks
-    return elapsedSeconds;
   }
 
   public forEachTickBetween(
@@ -259,14 +181,81 @@ export class TickSource {
    * @param  {Time} time  When to set the tick value
    * @return {Tone.TickSource}       this
    */
-  public setTicksAtTime(ticks: Ticks, time: Time) {
-    time = Context.toSeconds(time);
+  public setTicksAtTime(ticks: Ticks, time: ContextTime) {
     this.tickOffset.cancel(time);
     this.tickOffset.add({
       time,
       ticks,
-      seconds: this.frequency.getDurationOfTicks(ticks, time),
     });
     return this;
+  }
+
+  /**
+   *  Return the elapsed seconds at the given time.
+   *  @param  {Time}  time  When to get the elapsed seconds
+   *  @return  {Seconds}  The number of elapsed seconds
+   */
+  public getSecondsAtTime(time: ContextTime) {
+    return this.getElapsedAtTime(time).seconds;
+  }
+
+  /**
+   * Get the elapsed ticks at the given context time.
+   *
+   * @param time  When to get the tick value
+   * @return The number of ticks
+   */
+  public getTicksAtTime(time: ContextTime) {
+    return this.getElapsedAtTime(time).ticks;
+  }
+
+  /**
+   *  Return the elapsed seconds at the given time.
+   *  @param  {Time}  time  When to get the elapsed seconds
+   *  @return  {Seconds}  The number of elapsed seconds
+   */
+  private getElapsedAtTime(time: ContextTime) {
+    // We use the last stop event as we know that the elapsed times reset to 0 here
+    // So, this is just an optimization. We don't really need to do this (ie. we could iterate though all events)
+    let stopEvent = this.timeline.getLastState('stopped', time);
+    if (!stopEvent) {
+      stopEvent = { state: 'stopped', time: 0 };
+    }
+    // this event allows forEachBetween to iterate until the current time
+    const tmpEvent = { state : literal('paused'), time };
+    this.timeline.add(tmpEvent);
+
+    // the amount of seconds/ticks that have elapsed since the last stop
+    const elapsed = { seconds: 0, ticks: 0 };
+
+    // iterate through all the events since the last stop
+    let previous = stopEvent;
+    this.timeline.forEachBetween(stopEvent.time, time + Context.sampleTime, (current) => {
+      let periodStartTime = previous.time;
+
+      // If there is an offset event in this period use that
+      // For example, if we reset the transport to 0 while playing, we don't care at all what happened before the reset
+      // So, we reset the elapsed ticks/seconds and then set the start of the period to the start of the offset
+      const offsetEvent = this.tickOffset.get(current.time);
+      if (offsetEvent && offsetEvent.time >= (previous ? previous.time : 0)) {
+        elapsed.seconds = this.frequency.getDurationOfTicks(offsetEvent.ticks, offsetEvent.time);
+        elapsed.ticks = offsetEvent.ticks;
+        periodStartTime = offsetEvent.time;
+      }
+
+      // FIXME should we also use something like this.frequency.getTicksAtTime for seconds??
+      if (previous.state === 'started' && current.state !== 'started') {
+        elapsed.seconds += current.time - periodStartTime;
+        elapsed.ticks += this.frequency.getTicksAtTime(current.time) - this.frequency.getTicksAtTime(periodStartTime);
+      }
+
+      previous = current;
+    });
+
+    // remove the temporary event
+    this.timeline.remove(tmpEvent);
+
+    // return the ticks
+    return elapsed;
   }
 }

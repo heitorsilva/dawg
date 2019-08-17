@@ -6,68 +6,68 @@ export interface Events {
 
 type GenericListener = (...args: any[]) => void;
 
-export class StrictEventEmitter<E extends Events> extends EventEmitter {
+export class StrictEventEmitter<E extends Events> {
+  private emitter = new EventEmitter();
+
   public addListener<T extends keyof E & string>(event: T, listener: (...args: E[T]) => void) {
-    super.addListener(event, listener as GenericListener);
-    return this;
+    this.emitter.addListener(event, listener as GenericListener);
   }
 
   public on<T extends keyof E & string>(event: T, listener: (...args: E[T]) => void) {
-    super.on(event, listener as GenericListener);
-    return this;
+    this.emitter.on(event, listener as GenericListener);
+    return {
+      dispose: () => {
+        this.removeListener(event, listener);
+      },
+    };
   }
 
   public once<T extends keyof E & string>(event: T, listener: (...args: E[T]) => void) {
-    super.once(event, listener as GenericListener);
-    return this;
+    this.emitter.once(event, listener as GenericListener);
   }
 
   public prependListener<T extends keyof E & string>(event: T, listener: (...args: E[T]) => void) {
-    super.prependListener(event, listener as GenericListener);
-    return this;
+    this.emitter.prependListener(event, listener as GenericListener);
   }
 
   public prependOnceListener<T extends keyof E & string>(event: T, listener: (...args: E[T]) => void) {
-    super.prependOnceListener(event, listener as GenericListener);
-    return this;
+    this.emitter.prependOnceListener(event, listener as GenericListener);
   }
 
   public removeListener<T extends keyof E & string>(event: T, listener: (...args: E[T]) => void) {
-    super.removeListener(event, listener as GenericListener);
-    return this;
+    this.emitter.removeListener(event, listener as GenericListener);
   }
 
   public off<T extends keyof E & string>(event: T, listener: (...args: E[T]) => void) {
-    super.off(event, listener as GenericListener);
-    return this;
+    this.emitter.off(event, listener as GenericListener);
   }
 
   public removeAllListeners<T extends keyof E & string>(event?: T) {
-    return super.removeAllListeners(event);
+    this.emitter.removeAllListeners(event);
   }
 
-  public setMaxListeners(n: number): this {
-    return super.setMaxListeners(n);
+  public setMaxListeners(n: number) {
+    this.emitter.setMaxListeners(n);
   }
 
   public getMaxListeners(): number {
-    return super.getMaxListeners();
+    return this.emitter.getMaxListeners();
   }
 
   public listeners<T extends keyof E & string>(event: T) {
-    return super.listeners(event) as Array<(...args: E[T]) => void>;
+    return this.emitter.listeners(event) as Array<(...args: E[T]) => void>;
   }
 
   public rawListeners<T extends keyof E & string>(event: T) {
-    return super.rawListeners(event) as Array<(...args: E[T]) => void>;
+    return this.emitter.rawListeners(event) as Array<(...args: E[T]) => void>;
   }
 
-  public emit<T extends keyof E & string>(event: T, ...args: any[]) {
-    return super.emit(event, ...args);
+  public emit<T extends keyof E & string>(event: T, ...args: E[T]) {
+    this.emitter.emit(event, ...args);
   }
 
   public eventNames() {
-    return super.eventNames() as Array<keyof E & string>;
+    return this.emitter.eventNames() as Array<keyof E & string>;
   }
 
 }

@@ -29,7 +29,7 @@ function blobsToAudioBuffer(blobs: Blob[]): Promise<AudioBuffer> {
   return new Promise<AudioBuffer>((resolve) => {
     reader.onload = (event) => {
       const buffer = reader.result as ArrayBuffer;
-      Audio.context.value.decodeAudioData(buffer).then((decodedBuffer) => {
+      Audio.context.decodeAudioData(buffer).then((decodedBuffer) => {
         resolve(decodedBuffer);
       });
     };

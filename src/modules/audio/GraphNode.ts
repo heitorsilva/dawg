@@ -1,22 +1,11 @@
-import { Context } from '@/modules/audio/Context';
-import { mergeObjects, wrap } from '@/modules/audio/utils';
+import { wrap } from '@/modules/audio/utils';
 import { Wrapper } from 'vue-function-api';
 
 export interface AudioContextOptions {
-  context?: Wrapper<Context>;
-  input: AudioNode;
-  output: AudioNode;
+  node: AudioNode;
 }
 
 export class GraphNode {
-  /**
-   * Get the audio context belonging to this instance.
-   */
-  public readonly context: Wrapper<Context>;
-
-  public output: AudioNode;
-  public input: AudioNode;
-
   /**
    *  channelCount is the number of channels used when up-mixing and down-mixing
    *  connections to any inputs to the node. The default value is 2 except for
@@ -51,36 +40,28 @@ export class GraphNode {
    */
   public channelInterpretation: Wrapper<ChannelInterpretation>;
 
+  private node: AudioNode;
+
   constructor(opts: AudioContextOptions) {
     // use the default context if one is not passed in
-    const options = mergeObjects(opts, { context });
+    this.node = opts.node;
 
-    /**
-     * The AudioContext of this instance
-     * @private
-     * @type {AudioContext}
-     */
-    this.context = options.context;
-    this.output = options.output;
-    this.input = options.input;
-
-    this.channelCount =  wrap(options.output, 'channelCount');
-    this.channelCountMode = wrap(options.output, 'channelCountMode');
-    this.channelInterpretation = wrap(options.output, 'channelInterpretation');
+    this.channelCount =  wrap(opts.node, 'channelCount');
+    this.channelCountMode = wrap(opts.node, 'channelCountMode');
+    this.channelInterpretation = wrap(opts.node, 'channelInterpretation');
   }
 
   public connect(node: GraphNode) {
-    this.output.connect(node.output);
+    this.node.connect(node.node);
     return this;
   }
 
   public disconnect(node: GraphNode) {
-    this.output.disconnect(node.output);
+    this.node.disconnect(node.node);
     return this;
   }
 
   public dispose() {
-    this.input.disconnect();
-    this.output.disconnect();
+    this.node.disconnect();
   }
 }

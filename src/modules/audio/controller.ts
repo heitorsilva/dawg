@@ -107,7 +107,7 @@ export class Controller extends Tone.Signal {
     });
 
     this._events.cancel(0);
-    super.dispose.call(this);
+    super.dispose();
     return this;
   }
 
