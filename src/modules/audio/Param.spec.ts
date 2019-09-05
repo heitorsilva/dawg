@@ -1,11 +1,12 @@
 import { expect } from '@/modules/audio/test';
 import { Param } from '@/modules/audio/Param';
 import { Context } from '@/modules/audio';
+import { Gain } from '@/modules/audio/Gain';
 
 describe('Param', () => {
   it('can connect', () => {
-    const param = Context.createGain();
-    const input = Context.createGain();
+    const param = new Gain();
+    const input = new Gain();
     input.connect(param);
   });
 
@@ -19,19 +20,19 @@ describe('Param', () => {
   });
 
   it(`can have it's value set'`, () => {
-    const gain = Context.createGain();
+    const gain = new Gain();
     gain.gain.value = 5;
     expect(gain.gain.value).to.eq(5);
   });
 
   it(`can set a value in the future'`, () => {
-    const gain = Context.createGain();
+    const gain = new Gain();
     gain.gain.setValueAtTime({ value: 10, time: 11 });
     expect(gain.gain.getValueAtTime(11)).to.eq(10);
   });
 
   it(`can can cancel scheduled values'`, () => {
-    const gain = Context.createGain();
+    const gain = new Gain();
     gain.gain.setValueAtTime({ value: 5, time: 5 });
 
     gain.gain.setValueAtTime({ value: 10, time: 11 });

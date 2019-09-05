@@ -1,5 +1,6 @@
 import { wrap } from '@/modules/audio/utils';
 import { Wrapper } from 'vue-function-api';
+import { Context } from '@/modules/audio';
 
 export interface AudioContextOptions {
   node: AudioNode;
@@ -49,6 +50,19 @@ export class GraphNode {
     this.channelCount =  wrap(opts.node, 'channelCount');
     this.channelCountMode = wrap(opts.node, 'channelCountMode');
     this.channelInterpretation = wrap(opts.node, 'channelInterpretation');
+  }
+
+  /**
+   *  Connect 'this' to the master output. Shorthand for this.connect(Tone.Master)
+   *  @returns {Tone.AudioNode} this
+   *  @example
+   * //connect an oscillator to the master output
+   * var osc = new Tone.Oscillator().toMaster();
+   */
+  public toMaster() {
+    // TODO fix cast
+    this.connect((Context.master as any).output);
+    return this;
   }
 
   public connect(node: GraphNode) {

@@ -1,5 +1,7 @@
 import { EventEmitter } from 'events';
 
+// TODO move to highest level
+
 export interface Events {
   [name: string]: any[];
 }
@@ -10,7 +12,7 @@ export class StrictEventEmitter<E extends Events> {
   private emitter = new EventEmitter();
 
   public addListener<T extends keyof E & string>(event: T, listener: (...args: E[T]) => void) {
-    this.emitter.addListener(event, listener as GenericListener);
+    return this.on(event, listener as GenericListener);
   }
 
   public on<T extends keyof E & string>(event: T, listener: (...args: E[T]) => void) {
@@ -70,6 +72,9 @@ export class StrictEventEmitter<E extends Events> {
     return this.emitter.eventNames() as Array<keyof E & string>;
   }
 
+  public dispose() {
+    this.removeAllListeners();
+  }
 }
 
 export function emitter<E extends Events>() {

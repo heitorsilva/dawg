@@ -49,7 +49,9 @@ export class Controller extends Tone.Signal {
   }
 
   public sync(transport: Transport, time: TransportTime, duration: TransportTime) {
-    transport.on('start', this.callback).on('stop', this.callback).on('pause', this.callback);
+    transport.on('start', this.callback);
+    transport.on('stop', this.callback);
+    transport.on('pause', this.callback);
     const eventId = transport.scheduleRepeat(this.onTick.bind(this), '1i', time, duration);
     this.transports[eventId] = transport;
     return eventId;
@@ -103,7 +105,9 @@ export class Controller extends Tone.Signal {
   public dispose() {
     // I'm not a huge fan of this. There must be a better pattern.
     Object.values(this.transports).forEach((transport) => {
-      transport.off('start', this.callback).off('stop', this.callback).off('pause', this.callback);
+      transport.off('start', this.callback);
+      transport.off('stop', this.callback);
+      transport.off('pause', this.callback);
     });
 
     this._events.cancel(0);

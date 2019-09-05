@@ -169,7 +169,7 @@ export class Project implements Serializable<IProject> {
 
       const pattern = new Pattern(iPattern, scores);
       // Make sure we set the bpm because the transports will not remember
-      pattern.transport.bpm.value = i.bpm;
+      pattern.transport.bpm = i.bpm;
       return pattern;
     });
 
@@ -204,7 +204,7 @@ export class Project implements Serializable<IProject> {
     });
 
     const master = new Playlist(elements);
-    master.transport.bpm.value = i.bpm;
+    master.transport.bpm = i.bpm;
     Tone.Transport.bpm.value = i.bpm;
 
     return new Project({
@@ -263,10 +263,10 @@ export class Project implements Serializable<IProject> {
     // I want it to be reactive
     // Sub/pub ??
     // Also we shouldn't have to update the Transport bpm but we do
-    this.master.transport.bpm.value = bpm;
+    this.master.transport.bpm = bpm;
     Tone.Transport.bpm.value = bpm;
     this.patterns.forEach((pattern) => {
-      pattern.transport.bpm.value = bpm;
+      pattern.transport.bpm = bpm;
     });
   }
 
@@ -278,7 +278,7 @@ export class Project implements Serializable<IProject> {
     const name = findUniqueName(this.patterns, 'Pattern');
     const pattern = Pattern.create(name);
     // We also have to make sure new transports of the same bpm
-    pattern.transport.bpm.value = this.bpm;
+    pattern.transport.bpm = this.bpm;
     this.patterns.push(pattern);
   }
 

@@ -1,25 +1,28 @@
 import Tone from 'tone';
+import { Context } from '@/modules/audio/Context';
+import { ContextTime } from '@/modules/audio/types';
 
-export default function(callback: any, duration: any, channels?: any) {
+type Callback = (now: ContextTime) => void;
+
+export const Offline = (
+  callback: () => Callback | void,
+  duration?: number,
+  channels?: number,
+): Promise<AudioBuffer> => {
   duration = duration || 0.1;
   channels = channels || 1;
-  // @ts-ignore
-  return Tone.Offline((Transport) => {
-    const testFn = callback(Transport);
-    // @ts-ignore
-    if (testFn && Tone.isFunction(testFn.then)) {
-      return testFn;
-      // @ts-ignore
-    } else if (Tone.isFunction(testFn)) {
-      Transport.context.on('tick', () => {
-        testFn(Transport.now());
+  return (Tone as any).Offline(() => {
+    const testFn = callback();
+    if (typeof testFn === 'function') {
+      Context.onDidTick(() => {
+        testFn(Context.now());
       });
     }
-  }, duration).then((buffer: any) => {
-    // Tone.BufferTest(buffer);
-    if (channels === 1) {
-      buffer.toMono();
-    }
+  }, duration).then((buffer: AudioBuffer) => {
+    // BufferTest(buffer);
+    // if (channels === 1) {
+    //   buffer.toMono();
+    // }
     return buffer;
   });
-}
+};

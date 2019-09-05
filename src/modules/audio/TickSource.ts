@@ -30,7 +30,7 @@ export class TickSource {
   constructor(opts?: Partial<TickSourceOptions>) {
     const options = mergeObjects(opts, { frequency: 1 });
     this.frequency = new TickSignal(options);
-    this.setTicksAtTime(0, 0);
+    this.setTicksAtTime({ ticks: 0, time: 0 });
   }
 
   /**
@@ -46,7 +46,9 @@ export class TickSource {
   set seconds(s: number) {
     const now = Context.now();
     const ticks = this.frequency.timeToTicks(s, now);
-    this.setTicksAtTime(ticks.valueOf(), now); // TODO
+
+     // TODO
+    this.setTicksAtTime({ ticks: ticks.valueOf(), time: now });
   }
 
   /**
@@ -60,7 +62,7 @@ export class TickSource {
   }
 
   set ticks(t) {
-    this.setTicksAtTime(t, Context.now());
+    this.setTicksAtTime({ ticks: t, time: Context.now() });
   }
 
   /**
@@ -70,7 +72,9 @@ export class TickSource {
    *  @param {Ticks} [offset=0] The number of ticks to start the source at
    *  @return  {Tone.TickSource}  this
    */
-  public start(time?: Time, offset?: number) {
+  public start(time?: Time, opts?: { offset?: Ticks }) {
+    const { offset } = opts || { offset: undefined };
+
     time = Context.toSeconds(time);
     if (this.timeline.getValueAtTime(time) !== 'started') {
       this.timeline.setStateAtTime({
@@ -78,8 +82,8 @@ export class TickSource {
         time,
       });
 
-      if (typeof offset !== 'undefined') {
-        this.setTicksAtTime(offset, time);
+      if (offset !== undefined) {
+        this.setTicksAtTime({ ticks: offset, time });
       }
     }
     return this;
@@ -123,7 +127,7 @@ export class TickSource {
       state: 'stopped',
       time,
     });
-    this.setTicksAtTime(0, time);
+    this.setTicksAtTime({ ticks: 0, time });
     return this;
   }
 
@@ -181,7 +185,9 @@ export class TickSource {
    * @param  {Time} time  When to set the tick value
    * @return {Tone.TickSource}       this
    */
-  public setTicksAtTime(ticks: Ticks, time: ContextTime) {
+  public setTicksAtTime(args: { ticks: Ticks, time: ContextTime }) {
+    const { ticks, time } = args;
+
     this.tickOffset.cancel(time);
     this.tickOffset.add({
       time,
@@ -207,6 +213,10 @@ export class TickSource {
    */
   public getTicksAtTime(time: ContextTime) {
     return this.getElapsedAtTime(time).ticks;
+  }
+
+  public dispose() {
+    this.frequency.dispose();
   }
 
   /**

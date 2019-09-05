@@ -1,6 +1,6 @@
 import Tone from 'tone';
-import { ContextTime, TransportTime, Time, TransportSeconds } from '@/modules/audio/types';
-import { Emitter } from '@/modules/audio/Emitter';
+import { ContextTime, TransportTime, Time, TransportSeconds, Ticks } from '@/modules/audio/types';
+import { StrictEventEmitter } from '@/base/events';
 import { Clock } from '@/modules/audio/Clock';
 import { Context } from '@/modules/audio/Context';
 import { TickSignal } from '@/modules/audio/TickSignal';
@@ -51,20 +51,20 @@ Tone.TransportRepeatEvent.prototype.invoke = function(time, ticks) {
 
 type Event = Tone.TransportEvent | Tone.TransportRepeatEvent;
 
-export default class Transport extends Emitter<Events> {
+export default class Transport extends StrictEventEmitter<Events> {
   public loop = true;
   public timeline = new Tone.Timeline<Event>();
   public bpm: TickSignal;
   /**
    * Measured in ticks.
    */
-  private startPosition = 0;
+  private startPosition: Ticks = 0;
 
   private ppq = 192;
   // tslint:disable-next-line:variable-name
-  private _loopStart = 0;
+  private _loopStart: Ticks = 0;
   // tslint:disable-next-line:variable-name
-  private _loopEnd = 0;
+  private _loopEnd: Ticks = 0;
   private clock = new Clock({
     callback: this.processTick.bind(this),
     frequency: 0,
@@ -75,8 +75,14 @@ export default class Transport extends Emitter<Events> {
     super();
 
     this.bpm = this.clock.frequency;
-    this.bpm.toUnits = this.toUnits.bind(this);
-    this.bpm.fromUnits = this.fromUnits.bind(this);
+    this.bpm.toUnits = (freq: number) => {
+      return (freq / this.PPQ) * 60;
+    };
+
+    this.bpm.fromUnits = (bpm: number) => {
+      return 1 / (60 / bpm / this.PPQ);
+    };
+
     this.bpm.value = 120;
 
 
@@ -92,6 +98,83 @@ export default class Transport extends Emitter<Events> {
     this.clock.on('pause', (time) => {
       this.emit('pause', time);
     });
+  }
+
+  get loopStart() {
+    return new Tone.Ticks(this._loopStart).toSeconds();
+  }
+
+  set loopStart(loopStart: number) {
+    this._loopStart = Context.toTicks(loopStart);
+    this.seconds = loopStart;
+  }
+
+  get seconds() {
+    return this.clock.seconds.value;
+  }
+
+  set seconds(s: number) {
+    const now = Tone.Transport.context.now();
+    const ticks = this.clock.frequency.timeToTicks(s, now);
+    this.ticks = ticks.toTicks();
+  }
+
+  get loopEnd() {
+    return new Tone.Ticks(this._loopEnd).toSeconds();
+  }
+
+  set loopEnd(loopEnd: number) {
+    this._loopEnd = Context.toTicks(loopEnd);
+  }
+
+  get ticks() {
+    return this.clock.ticks.value;
+  }
+
+
+  set ticks(t: number) {
+    if (this.clock.ticks.value !== t) {
+      const now = Tone.Transport.context.now();
+      // stop everything synced to the transport
+      if (this.state === 'started') {
+        // restart it with the new time
+        this.emit('stop', now);
+        this.clock.setTicksAtTime({ ticks: t, time: now });
+        this.emit('start', now, this.seconds);
+      } else {
+        this.clock.setTicksAtTime({ ticks: t, time: now });
+      }
+
+      this.startPosition = t;
+    }
+  }
+
+  get beats() {
+    return this.ticks / this.PPQ;
+  }
+
+  get PPQ() {
+    return this.ppq;
+  }
+
+  set PPQ(ppq: number) {
+    const bpm = this.bpm;
+    this.ppq = ppq;
+    this.bpm = bpm;
+  }
+
+  get state() {
+    return this.clock.state;
+  }
+
+  get progress() {
+    if (this.loop) {
+      const now = Tone.Transport.context.now();
+      const ticks = this.clock.getTicksAtTime(now);
+      return (ticks - this._loopStart) / (this._loopEnd - this._loopStart);
+    } else {
+      return 0;
+    }
   }
 
   /**
@@ -148,15 +231,13 @@ export default class Transport extends Emitter<Events> {
    * Start playback from current position.
    */
   public start(time?: ContextTime, offset?: TransportTime) {
-    if (offset !== undefined) {
-      offset = Context.toTicks(offset);
-    }
+    offset = offset === undefined ? 0 : Context.toTicks(offset);
 
     if (time === undefined) {
       time = Context.now();
     }
 
-    this.clock.start(time, offset as any);
+    this.clock.start(time, offset);
     return this;
   }
 
@@ -181,83 +262,6 @@ export default class Transport extends Emitter<Events> {
     this.loopStart = loopStart;
     this.loopEnd = loopEnd;
     return this;
-  }
-
-  get loopStart() {
-    return new Tone.Ticks(this._loopStart).toSeconds();
-  }
-
-  set loopStart(loopStart: number) {
-    this._loopStart = Context.toTicks(loopStart);
-    this.seconds = loopStart;
-  }
-
-  get seconds() {
-    return this.clock.seconds.value;
-  }
-
-  set seconds(s: number) {
-    const now = Tone.Transport.context.now();
-    const ticks = this.clock.frequency.timeToTicks(s, now);
-    this.ticks = ticks.toTicks();
-  }
-
-  get loopEnd() {
-    return new Tone.Ticks(this._loopEnd).toSeconds();
-  }
-
-  set loopEnd(loopEnd: number) {
-    this._loopEnd = Context.toTicks(loopEnd);
-  }
-
-  get ticks() {
-    return this.clock.ticks.value;
-  }
-
-
-  set ticks(t: number) {
-    if (this.clock.ticks.value !== t) {
-      const now = Tone.Transport.context.now();
-      // stop everything synced to the transport
-      if (this.state === 'started') {
-        // restart it with the new time
-        this.emit('stop', now);
-        this.clock.setTicksAtTime(t, now);
-        this.emit('start', now, this.seconds);
-      } else {
-        this.clock.setTicksAtTime(t, now);
-      }
-
-      this.startPosition = t;
-    }
-  }
-
-  get beats() {
-    return this.ticks / this.PPQ;
-  }
-
-  get PPQ() {
-    return this.ppq;
-  }
-
-  set PPQ(ppq: number) {
-    const bpm = this.bpm;
-    this.ppq = ppq;
-    this.bpm = bpm;
-  }
-
-  get state() {
-    return this.clock.state;
-  }
-
-  get progress() {
-    if (this.loop) {
-      const now = Tone.Transport.context.now();
-      const ticks = this.clock.getTicksAtTime(now);
-      return (ticks - this._loopStart) / (this._loopEnd - this._loopStart);
-    } else {
-      return 0;
-    }
   }
 
   public get(eventId: string) {
@@ -288,7 +292,7 @@ export default class Transport extends Emitter<Events> {
     if (this.loop) {
       if (ticks >= this._loopEnd) {
         this.emit('loopEnd', exact);
-        this.clock.setTicksAtTime(this._loopStart, exact);
+        this.clock.setTicksAtTime({ ticks: this._loopStart, time: exact });
         ticks = this._loopStart;
         this.emit('loopStart', exact, this.clock.getSecondsAtTime(exact));
         this.emit('loop', exact);
@@ -305,14 +309,6 @@ export default class Transport extends Emitter<Events> {
     this.timeline.add(event);
     this.scheduledEvents[event.id.toString()] = event;
     return event.id;
-  }
-
-  private fromUnits(bpm: number) {
-    return 1 / (60 / bpm / this.PPQ);
-  }
-
-  private toUnits(freq: number) {
-    return (freq / this.PPQ) * 60;
   }
 }
 

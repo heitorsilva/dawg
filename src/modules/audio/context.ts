@@ -42,13 +42,10 @@ const ticker = new Ticker(() => events.emit('tick'), 0.03); // updateInterval FI
 export class Context {
   public static context = (Tone.context as any)._context as unknown as AudioContext;
   public static lookAhead = 0.1;
+  public static master = Tone.Master;
 
   public static now() {
     return Context.context.currentTime + Context.lookAhead;
-  }
-
-  public static createGain() {
-    return new Gain(Context.context.createGain());
   }
 
   public static immediate() {

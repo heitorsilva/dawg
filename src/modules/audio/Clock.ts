@@ -1,4 +1,4 @@
-import { Emitter } from '@/modules/audio/Emitter';
+import { StrictEventEmitter } from '@/base/events';
 import { mergeObjects, wrap } from '@/modules/audio/utils';
 import { Ticks, ContextTime } from '@/modules/audio/types';
 import { Context } from '@/modules/audio/Context';
@@ -19,7 +19,9 @@ const defaults = {
   frequency: 1,
 };
 
-export class Clock extends Emitter<{ start: [ContextTime, Ticks], stop: [ContextTime], pause: [ContextTime] }> {
+export class Clock extends StrictEventEmitter<
+  { start: [ContextTime, Ticks], stop: [ContextTime], pause: [ContextTime] }
+> {
   private callback: Callback;
   private tickSource = new TickSource({ frequency: defaults.frequency });
   private timeline = new TimelineState('stopped');
@@ -50,7 +52,14 @@ export class Clock extends Emitter<{ start: [ContextTime, Ticks], stop: [Context
     return this.timeline.getValueAtTime(Context.now());
   }
 
-  public start(time?: ContextTime, offset?: Ticks) {
+  /**
+   *  Start the clock at the given time. Optionally pass in an offset
+   *  of where to start the tick counter from.
+   *  @param time The time the clock should start
+   *  @param  offset Where the tick counter starts counting from.
+   *  @return this
+   */
+  public start(time?: ContextTime, offset: Ticks = 0) {
     // make sure the context is started
     Context.resume();
 
@@ -61,7 +70,7 @@ export class Clock extends Emitter<{ start: [ContextTime, Ticks], stop: [Context
         state: 'started',
         time: seconds,
       });
-      this.tickSource.start(seconds, offset);
+      this.tickSource.start(seconds, { offset });
 
       if (seconds < this.lastUpdate) {
         this.emit('start', seconds, offset);

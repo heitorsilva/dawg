@@ -3,7 +3,7 @@ import { Signal } from '@/modules/audio/Signal';
 import { mergeObjects } from '@/modules/audio/utils';
 import { Time, Ticks, ContextTime } from '@/modules/audio/types';
 import { Context } from '@/modules/audio/Context';
-import { ParamEvent } from '@/modules/audio/Param';
+import { ParamEvent, Param } from '@/modules/audio/Param';
 
 interface TickSignalOptions {
   frequency: number;
@@ -27,27 +27,20 @@ const defaults: TickSignalOptions = {
  */
 export class TickSignal extends Signal {
   private ticks: { [id: string]: Ticks } = {};
-  private disposer: () => void;
 
   constructor(opts?: TickSignalOptions) {
     super({
       value: mergeObjects(opts, defaults).frequency,
     });
 
-    const addDisposer = this.events.on('add', (e) => {
-      const previousEvent = this.events.previousEvent(e);
-      const ticks = this._getTicksAtTime(e.time, previousEvent);
+    this.events.on('add', (e) => {
+      const ticks = this.getTicksOfEvent(e);
       this.ticks[e.id] = Math.max(ticks, 0);
     });
 
-    const removeDisposer = this.events.on('remove', (e) => {
+    this.events.on('remove', (e) => {
       delete this.ticks[e.id];
     });
-
-    this.disposer = () => {
-      addDisposer.dispose();
-      removeDisposer.dispose();
-    };
   }
 
   /**
@@ -81,7 +74,7 @@ export class TickSignal extends Signal {
     const { value, endTime } = args;
 
     // start from previously scheduled value
-    const { time: prevTime, value: prevValue } = this.events.get(endTime) || { time: 0, value: 0 };
+    const { time: prevTime, value: prevValue } = this.events.get(endTime) || { time: 0, value: this.initialValue };
 
     // approx 10 segments per second
     const segments = Math.round(Math.max((endTime - prevTime) * 10, 1));
@@ -112,27 +105,31 @@ export class TickSignal extends Signal {
    * @return {Time}      The time that the tick occurs.
    */
   public getTimeOfTick(tick: Ticks) {
-    const before = this.events.get(tick, (e) => this.ticks[e.id]);
+    const before =
+      this.events.get(tick, (e) => this.ticks[e.id]) ||
+      { id: undefined, time: 0, value: this.initialValue };
+
+    const beforeTicks = before.id === undefined ? 0 : this.ticks[before.id];
     const after = this.events.getAfter(tick, (e) => this.ticks[e.id]);
-    if (before && this.ticks[before.id] === tick) {
+
+    if (beforeTicks === tick) {
       return before.time;
-    } else if (before && after && after.type === 'linearRampToValueAtTime' &&
-      before.value !== after.value) {
+    } else if (after && after.type === 'linearRampToValueAtTime' && before.value !== after.value) {
       const val0 = this.getValueAtTime(before.time);
       const val1 = this.getValueAtTime(after.time);
       const delta = (val1 - val0) / (after.time - before.time);
-      const k = Math.sqrt(Math.pow(val0, 2) - 2 * delta * (this.ticks[before.id] - tick));
+      const k = Math.sqrt(Math.pow(val0, 2) - 2 * delta * (beforeTicks - tick));
       const sol1 = (-val0 + k) / delta;
       const sol2 = (-val0 - k) / delta;
       return (sol1 > 0 ? sol1 : sol2) + before.time;
-    } else if (before) {
+    } else {
+      // else, it is a setValueAtTime event
+      // we need to check if the frequency is 0 though because that means we will never reach the given tick value
       if (before.value === 0) {
         return Infinity;
       } else {
-        return before.time + (tick - this.ticks[before.id]) / before.value;
+        return before.time + (tick - beforeTicks) / before.value;
       }
-    } else {
-      return tick / this.initialValue;
     }
   }
 
@@ -147,10 +144,6 @@ export class TickSignal extends Signal {
     return this.getTimeOfTick(currentTick + ticks) - time;
   }
 
-  public dispose() {
-    this.disposer();
-  }
-
   /**
    * Returns the tick value at the time. Takes into account any automation curves scheduled on the
    * signal.
@@ -159,18 +152,29 @@ export class TickSignal extends Signal {
    * @return {Ticks}      The number of ticks which have elapsed at the time
    *                          given any automations.
    */
-  private _getTicksAtTime(time: ContextTime, event: { time: number, id: number | undefined } | null): Ticks {
-    event = event || { time: 0, id: undefined };
+  private _getTicksAtTime(time1: ContextTime, event: ParamEvent | null): Ticks {
+    const time0 = event ? event.time : 0;
 
-    const val0 = this.getValueAtTime(event.time);
-    let val1 = this.getValueAtTime(time);
+    const val0 = this.getValueAtTime(time0);
+    let val1 = this.getValueAtTime(time1);
 
     // if it's right on the line, take the previous value
-    const e = this.events.get(time);
-    if (e && e.time === time && e.type === 'setValueAtTime') {
-      val1 = this.getValueAtTime(time - Context.sampleTime);
+    const e = this.events.get(time1);
+    if (e && e.time === time1 && e.type === 'setValueAtTime') {
+      val1 = this.getValueAtTime(time1 - Context.sampleTime);
     }
 
-    return 0.5 * (time - event.time) * (val0 + val1) + (event.id === undefined ? 0 : this.ticks[event.id]);
+    const ticks = event ? this.ticks[event.id] : this.getTicksOfEvent(event);
+
+    return 0.5 * (time1 - time0) * (val0 + val1) + ticks;
+  }
+
+  private getTicksOfEvent(e: ParamEvent | null) {
+    if (e === null) {
+      return 0;
+    }
+
+    const previousEvent = this.events.previousEvent(e);
+    return this._getTicksAtTime(e.time, previousEvent);
   }
 }

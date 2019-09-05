@@ -1,7 +1,7 @@
 import Tone from 'tone';
 import { TransportTime } from '@/modules/audio';
 import { ContextTime } from '@/modules/audio/types';
-import { Emitter } from '@/modules/audio/Emitter';
+import { StrictEventEmitter } from '@/base/events';
 
 type Comparator<T> = 'time' | ((e: T) => number | Tone.Time);
 
@@ -12,7 +12,7 @@ type Comparator<T> = 'time' | ((e: T) => number | Tone.Time);
  *         retrieval.
  *  @param {Positive} [memory=Infinity] The number of previous events that are retained.
  */
-export class Timeline<T extends { time: Tone.Time | number; }> extends Emitter<{ add: [T], remove: [T] }> {
+export class Timeline<T extends { time: Tone.Time | number; }> extends StrictEventEmitter<{ add: [T], remove: [T] }> {
   protected timeline: T[] = [];
 
   constructor(private memory = Infinity) {

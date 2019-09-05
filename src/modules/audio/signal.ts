@@ -1,6 +1,7 @@
 import { Param } from '@/modules/audio/Param';
 import { mergeObjects } from '@/modules/audio/utils';
 import { Context } from '@/modules/audio/Context';
+import { GraphNode } from '@/modules/audio/GraphNode';
 
 interface SignalOptions {
   value: number;
@@ -27,9 +28,12 @@ const defaults: SignalOptions = {
  *  @example
  * var signal = new Tone.Signal(10);
  */
-export abstract class Signal extends Param {
+export class Signal extends Param {
+  public node: GraphNode;
+
   constructor(opts?: Partial<SignalOptions>) {
     const constantSource = Context.createConstantSource();
     super(constantSource.offset, mergeObjects(opts, defaults));
+    this.node = new GraphNode({ node: constantSource });
   }
 }

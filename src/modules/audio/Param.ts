@@ -1,9 +1,7 @@
-import { GraphNode } from '@/modules/audio/GraphNode';
 import { AutomationType, Time, ContextTime } from '@/modules/audio/types';
 import { mergeObjects } from '@/modules/audio/utils';
 import { Timeline } from '@/modules/audio/Timeline';
 import { Context } from '@/modules/audio/Context';
-import { Emitter } from '@/modules/audio/Emitter';
 
 export interface ParamOptions {
   value: number;
@@ -49,11 +47,10 @@ export class Param {
     this.param = param;
     const options = mergeObjects(opts, defaults);
 
-    // to satisfy typescript
-    this.initialValue = options.value;
+    this.initialValue = this.fromUnits(options.value);
+    this.param.setValueAtTime(options.value, 0);
 
-    // this does the same as above
-    this.value = options.value;
+    // this.setValueAtTime({ value: options.value, time: 0 });
   }
 
   /**
@@ -64,13 +61,32 @@ export class Param {
    */
   get value() {
     const now = Context.now();
-    return this.getValueAtTime(now);
+    return this.toUnits(this.getValueAtTime(now));
   }
 
   set value(value) {
-    this.initialValue = value;
+    this.initialValue = this.fromUnits(value);
     this.cancelScheduledValues(Context.now());
     this.setValueAtTime({ value, time: Context.now() });
+  }
+
+  // TODO remove these methods. We should wrap a paramter instead, but I'm not sure exactly how to do that yet.
+  /**
+   * An overridable method to convert the current value to it's original units.
+   *
+   * @param value The value to convert.
+   */
+  public fromUnits(value: number) {
+    return value;
+  }
+
+  /**
+   * An overridable method to convert the current value to it's new units.
+   *
+   * @param value The value to convert.
+   */
+  public toUnits(value: number) {
+    return value;
   }
 
   /**
@@ -82,17 +98,14 @@ export class Param {
   public getValueAtTime(time: Time) {
     time = Context.toSeconds(time);
     const after = this.events.getAfter(time);
-    const before = this.events.get(time);
-    const initialValue = this.initialValue === undefined ? this.param.defaultValue : this.initialValue;
-    let value = initialValue;
-    // if it was set by
-    if (before === null) {
-      value = initialValue;
-    } else if (before.type === 'setTargetAtTime') {
+    const before = this.events.get(time) || { type: 'setValueAtTime', value: this.initialValue, time: 0 };
+    let value = this.initialValue;
+
+    if (before.type === 'setTargetAtTime') {
       const previous = this.events.getBefore(before.time);
       let previousVal;
       if (previous === null) {
-        previousVal = initialValue;
+        previousVal = this.initialValue;
       } else {
         previousVal = previous.value;
       }
@@ -106,6 +119,7 @@ export class Param {
     } else {
       value = before.value;
     }
+
     return value;
   }
 
@@ -119,7 +133,8 @@ export class Param {
    * freq.setValueAtTime("G4", "+1");
    */
   public setValueAtTime(args: { time: ContextTime, value: number }) {
-    const { time, value } = args;
+    const time = args.time;
+    const value = this.fromUnits(args.value);
 
     const e: ParamEvent = {
       type: 'setValueAtTime',
@@ -145,7 +160,7 @@ export class Param {
   public linearRampToValueAtTime(args: { value: number, endTime: ContextTime }) {
     this.events.add({
       type : 'linearRampToValueAtTime',
-      value: args.value,
+      value: this.fromUnits(args.value),
       time: args.endTime,
       id: this.id++,
     });
@@ -163,7 +178,7 @@ export class Param {
    *  @returns {Tone.Param} this
    */
   public exponentialRampToValueAtTime(args: { value: number, endTime: ContextTime}) {
-    const value = Math.max(this.minOutput, args.value);
+    const value = Math.max(this.minOutput, this.fromUnits(args.value));
     const endTime = args.endTime;
 
     this.events.add({
@@ -191,6 +206,10 @@ export class Param {
     return this;
   }
 
+  public dispose() {
+    this.events.dispose();
+  }
+
   protected _exponentialApproach(
     t0: number, v0: number, v1: number, timeConstant: number, t: number,
   ) {
@@ -204,6 +223,7 @@ export class Param {
 
   // Calculates the the value along the curve produced by exponentialRampToValueAtTime
   protected _exponentialInterpolate(t0: number, v0: number, t1: number, v1: number, t: number) {
+    // TODO what if v0 === 0 or t1 === t0
     return v0 * Math.pow(v1 / v0, (t - t0) / (t1 - t0));
   }
 }

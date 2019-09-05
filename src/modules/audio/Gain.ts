@@ -1,14 +1,15 @@
 import { GraphNode } from '@/modules/audio/GraphNode';
 import { Param, ParamOptions } from '@/modules/audio/Param';
+import { Context } from '@/modules/audio/Context';
 
 export class Gain extends GraphNode {
   public gain: Param;
 
-  constructor(gain: GainNode, opts?: ParamOptions) {
+  constructor(opts?: ParamOptions) {
+    const gain = Context.context.createGain();
     super({
-      input: gain,
-      output: gain,
+      node: gain,
     });
-    this.gain = new Param(gain.gain, gain, opts);
+    this.gain = new Param(gain.gain, opts);
   }
 }
