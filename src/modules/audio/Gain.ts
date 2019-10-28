@@ -10,6 +10,8 @@ export class Gain extends GraphNode {
     super({
       node: gain,
     });
+
+    // TODO toUnits and fromUnits?????
     this.gain = new Param(gain.gain, opts);
   }
 }

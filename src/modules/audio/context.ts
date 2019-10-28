@@ -2,6 +2,7 @@ import Tone from 'tone';
 import { Time } from '@/modules/audio/types';
 import { emitter } from '@/base/events';
 import { Gain } from '@/modules/audio/Gain';
+import { GraphNode } from '@/modules/audio/GraphNode';
 
 class Ticker {
   private worker: Worker;
@@ -42,7 +43,8 @@ const ticker = new Ticker(() => events.emit('tick'), 0.03); // updateInterval FI
 export class Context {
   public static context = (Tone.context as any)._context as unknown as AudioContext;
   public static lookAhead = 0.1;
-  public static master = Tone.Master;
+  // TODO fix cast
+  public static master = new GraphNode({ node:  (Tone.Master as any).output });
 
   public static now() {
     return Context.context.currentTime + Context.lookAhead;

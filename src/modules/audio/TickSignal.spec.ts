@@ -167,7 +167,7 @@ describe.only('TickSignal', () => {
     tickSignal.dispose();
   });
 
-  it.only('computes the time of a given tick when a linearRampToValueAtTime is scheduled', () => {
+  it('computes the time of a given tick when a linearRampToValueAtTime is scheduled', () => {
     const tickSignal = new TickSignal({ frequency: 1 });
     tickSignal.linearRampToValueAtTime({ value: 2, endTime: 1 });
     expect(tickSignal.getTimeOfTick(0)).to.eq(0);
@@ -185,7 +185,7 @@ describe.only('TickSignal', () => {
     tickSignal.linearRampToValueAtTime({ value: 0, endTime: 2 });
     expect(tickSignal.getTimeOfTick(0)).to.eq(0);
     expect(tickSignal.getTimeOfTick(1)).to.closeTo(0.7320508, 0.000001);
-    expect(tickSignal.getTimeOfTick(2)).to.eq(1.25);
+    expect(tickSignal.getTimeOfTick(2)).to.closeTo(1.29289321, 0.000001);
     expect(tickSignal.getTimeOfTick(3)).to.equal(Infinity);
     tickSignal.dispose();
   });
@@ -194,8 +194,8 @@ describe.only('TickSignal', () => {
     const tickSignal = new TickSignal({ frequency: 1 });
     tickSignal.exponentialRampToValueAtTime({ value: 2, endTime: 1 });
     expect(tickSignal.getTimeOfTick(0)).to.eq(0);
-    expect(tickSignal.getTimeOfTick(2)).to.eq(1.25);
-    expect(tickSignal.getTimeOfTick(3)).to.eq(1.75);
+    expect(tickSignal.getTimeOfTick(2)).to.closeTo(1.27836, 0.00001);
+    expect(tickSignal.getTimeOfTick(3)).to.closeTo(1.778363691, 0.00001);
     tickSignal.dispose();
   });
 
@@ -205,8 +205,8 @@ describe.only('TickSignal', () => {
     tickSignal.exponentialRampToValueAtTime({ value: 2, endTime: 1 });
     tickSignal.exponentialRampToValueAtTime({ value: 0, endTime: 2 });
     expect(tickSignal.getTimeOfTick(0)).to.eq(0);
-    expect(tickSignal.getTimeOfTick(0.5)).to.eq(0.5);
-    expect(tickSignal.getTimeOfTick(1.5)).to.eq(1);
+    expect(tickSignal.getTimeOfTick(0.5)).to.closeTo(0.42914774, 0.00001);
+    expect(tickSignal.getTimeOfTick(1.5)).to.closeTo(1.03421807444, 0.000001);
     expect(tickSignal.getTimeOfTick(3)).to.equal(Infinity);
     tickSignal.dispose();
   });
@@ -221,7 +221,7 @@ describe.only('TickSignal', () => {
 
     for (let time = 0; time < 4; time += 0.2) {
       const tick = tickSignal.getTicksAtTime(time);
-      expect(tickSignal.getTimeOfTick(tick)).to.eq(time);
+      expect(tickSignal.getTimeOfTick(tick)).to.closeTo(time, 0.000001);
     }
 
     tickSignal.dispose();
@@ -233,8 +233,8 @@ describe.only('TickSignal', () => {
     tickSignal.setValueAtTime({ value: 10, time: 2 });
     expect(tickSignal.getDurationOfTicks(1, 0)).to.eq(1);
     expect(tickSignal.getDurationOfTicks(1, 1)).to.eq(0.5);
-    expect(tickSignal.getDurationOfTicks(1, 2)).to.eq(0.1);
-    expect(tickSignal.getDurationOfTicks(2, 1.5)).to.eq(0.6);
+    expect(tickSignal.getDurationOfTicks(1, 2)).to.closeTo(0.1, 0.00001);
+    expect(tickSignal.getDurationOfTicks(2, 1.5)).to.closeTo(0.6, 0.000001);
   });
 
   it('outputs a signal', () => {

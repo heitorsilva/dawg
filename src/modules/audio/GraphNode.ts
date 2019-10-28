@@ -1,6 +1,6 @@
 import { wrap } from '@/modules/audio/utils';
 import { Wrapper } from 'vue-function-api';
-import { Context } from '@/modules/audio';
+import { Context } from '@/modules/audio/Context';
 
 export interface AudioContextOptions {
   node: AudioNode;
@@ -60,12 +60,12 @@ export class GraphNode {
    * var osc = new Tone.Oscillator().toMaster();
    */
   public toMaster() {
-    // TODO fix cast
-    this.connect((Context.master as any).output);
+    this.connect(Context.master);
     return this;
   }
 
   public connect(node: GraphNode) {
+    console.log(node.node);
     this.node.connect(node.node);
     return this;
   }
