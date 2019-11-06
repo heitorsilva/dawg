@@ -98,3 +98,4 @@ git push --tags
 [GridSound](https://gridsound.com) was a great reference during development. For example, components such as `Timeline.vue` and `BeatLines.vue` were based off similar component implementations from [gs-ui-components](https://github.com/gridsound/gs-ui-components).
 
 [VS Code](https://code.visualstudio.com/) was also used as a reference during development. We are big fans of the structure and navigation tools (Shortcuts, Command Palette, etc) and wanted to implement similar features within `Vusic`.
+# notion
