@@ -44,30 +44,25 @@ Here is an incomplete list of the major tasks that need to be completed. :runner
 ### Prerequisites
 1. Install [Node Version Manager (NVM)](https://github.com/creationix/nvm#install-script)
 1. Install [Node and npm using NVM](https://github.com/creationix/nvm#usage)
-1. Install the dependencies: `npm i`
+1. Install [Yarn 1.X](https://yarnpkg.com/getting-started/install).
+1. Install the dependencies: `yarn`
 
 ### Development
 Development occurs one of two places. Application development occurs in `Electron`. To start the `Electron` application in development mode, use this command:
 ```
-npm run serve:electron
+yarn run serve
 ```
 
 ### Building
 The following command will build `Vusic` for your current operating system. It is not very easy to build cross-platform. As such, we use `Travis CI` to build for Linux, MacOS, and Windows at the same time. See the `.travis.yml` file for more information.
 ```
-npm run build
-```
-
-#### Electron
-Currently, we are able to build the `Electron` application; however, deployment and auto-update mechanisms have yet to be created. To build the application, run the following command:
-```
-npm run build:electron
+yarn run build
 ```
 
 # Testing
 Currently, there is a small unit suite available. These tests make use of [Vue Test Utils](https://vue-test-utils.vuejs.org/) and can be initiated using the following command.
 ```
-npm run test:unit
+yarn run test:unit
 ```
 There is also an `test:e2e` command; however, this test suite does not currently contain any tests.
 

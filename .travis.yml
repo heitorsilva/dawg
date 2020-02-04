@@ -24,6 +24,7 @@ matrix:
 #   chrome: stable
 
 cache:
+  yarn: true
   directories:
     - node_modules
     - $HOME/.cache/electron
@@ -40,13 +41,13 @@ branches:
     - develop
 
 install:
-  npm i
+  yarn install
 
 # script:
-#   - npm run test:unit
+#   - yarn run test:unit
 
 script:
-  - npm run build
+  - yarn run build
 
 deploy:
   provider: releases
