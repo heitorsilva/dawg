@@ -1,33 +1,37 @@
-import Vue from 'vue';
-import VueCompositionApi from '@vue/composition-api';
+import Vue from "vue";
+import VueCompositionApi from "@vue/composition-api";
 Vue.use(VueCompositionApi);
 
-import { expect } from '@dawg/testing';
-import { Section, SectionOpts } from './helper';
-
+import { expect } from "@dawg/testing";
+import { Section, SectionOpts } from "@/helper";
 
 const create = (o?: SectionOpts) => {
   return new Section(o);
 };
 
-describe.only('Split', () => {
-  const root = create({ name: 'Root', direction: 'horizontal' });
+describe.only("Split", () => {
+  const root = create({ name: "Root", direction: "horizontal" });
 
-  const a = create({ name: 'a', direction: 'vertical' });
-  const b = create({ name: 'b', direction: 'vertical' });
-  const c = create({ name: 'c', initial: 20, minSize: 10 });
-  [a, b, c].forEach((node) => node.setParent(root));
+  const a = create({ name: "a", direction: "vertical" });
+  const b = create({ name: "b", direction: "vertical" });
+  const c = create({ name: "c", initial: 20, minSize: 10 });
+  [a, b, c].forEach(node => node.setParent(root));
 
-  const aa = create({ mode: 'fixed', name: 'aa' });
-  const ab = create({ name: 'ab' });
-  const ac = create({ mode: 'low', name: 'ac' });
-  const ad = create({ collapsible: true, minSize: 15, name: 'ad' });
-  [aa, ab, ac, ad].forEach((node) => node.setParent(a));
+  const aa = create({ mode: "fixed", name: "aa" });
+  const ab = create({ name: "ab" });
+  const ac = create({ mode: "low", name: "ac" });
+  const ad = create({ collapsible: true, minSize: 15, name: "ad" });
+  [aa, ab, ac, ad].forEach(node => node.setParent(a));
 
-  const ba = create({ collapsed: true, collapsible: true, minSize: 15, name: 'ba' });
-  const bb = create({ name: 'bb' });
-  const bc = create({ name: 'bc' });
-  [ba, bb, bc].forEach((node) => node.setParent(b));
+  const ba = create({
+    collapsed: true,
+    collapsible: true,
+    minSize: 15,
+    name: "ba"
+  });
+  const bb = create({ name: "bb" });
+  const bc = create({ name: "bc" });
+  [ba, bb, bc].forEach(node => node.setParent(b));
 
   let toDispose: Array<{ dispose: () => void }> = [];
 
@@ -36,12 +40,12 @@ describe.only('Split', () => {
   });
 
   afterEach(() => {
-    toDispose.forEach((d) => d.dispose());
+    toDispose.forEach(d => d.dispose());
     toDispose = [];
     root.dispose();
   });
 
-  it('initializes correctly', async () => {
+  it("initializes correctly", async () => {
     expect(root.sizes).to.deep.eq({ height: 100, width: 100 });
     expect(a.sizes).to.deep.eq({ height: 100, width: 40 });
     expect(b.sizes).to.deep.eq({ height: 100, width: 40 });
@@ -55,7 +59,7 @@ describe.only('Split', () => {
     expect(ad.sizes).to.deep.eq({ height: 25, width: 40 });
   });
 
-  it('resizing correctly', () => {
+  it("resizing correctly", () => {
     // a can't resize, nothing is "behind" it
     a.move(10);
     expect(a.sizes.width).to.deep.eq(40);
@@ -69,7 +73,7 @@ describe.only('Split', () => {
     expect(c.sizes.width).to.deep.eq(20);
   });
 
-  it('stops at the max', () => {
+  it("stops at the max", () => {
     // It will resize by 10, not 20
     b.move(20);
     expect(a.sizes.width).to.deep.eq(60);
@@ -88,13 +92,13 @@ describe.only('Split', () => {
     expect(c.sizes.width).to.deep.eq(10);
   });
 
-  it('resizes correctly with fixed flag', () => {
+  it("resizes correctly with fixed flag", () => {
     ab.move(10);
     expect(aa.sizes.height).to.deep.eq(25);
     expect(ab.sizes.height).to.deep.eq(25);
   });
 
-  it('resizes correctly with keep', () => {
+  it("resizes correctly with keep", () => {
     // ab will resize before ac because ac has the "keep" flag
     ad.move(10);
     expect(ab.sizes.height).to.deep.eq(35);
@@ -102,7 +106,7 @@ describe.only('Split', () => {
     expect(ad.sizes.height).to.deep.eq(15);
   });
 
-  it('correctly collapses and un-collapses', () => {
+  it("correctly collapses and un-collapses", () => {
     ad.move(10);
     expect(ad.sizes.height).to.deep.eq(15);
 
@@ -112,7 +116,6 @@ describe.only('Split', () => {
     // nothing will happen here
     ad.move(10);
     expect(ad.sizes.height).to.deep.eq(15);
-
 
     // now it will collapse
     ad.move(11);
@@ -127,13 +130,15 @@ describe.only('Split', () => {
     expect(ad.sizes.height).to.deep.eq(15);
   });
 
-  it('correctly collapses when told to do so', () => {
+  it("correctly collapses when told to do so", () => {
     const sizeChanges: number[] = [];
-    toDispose.push(ba.addListeners({
-      resize: (value) => {
-        sizeChanges.push(value);
-      },
-    }));
+    toDispose.push(
+      ba.addListeners({
+        resize: value => {
+          sizeChanges.push(value);
+        }
+      })
+    );
 
     ad.collapse();
     expect(aa.sizes.height).to.deep.eq(25);
@@ -150,27 +155,29 @@ describe.only('Split', () => {
     expect(sizeChanges).to.deep.eq([]);
   });
 
-  it('initializes correctly with collapsed initially set to true', () => {
+  it("initializes correctly with collapsed initially set to true", () => {
     expect(ba.sizes.height).to.deep.eq(0);
     expect(bb.sizes.height).to.deep.eq(50);
     expect(bc.sizes.height).to.deep.eq(50);
   });
 
-  it('collapses and un-collapses during resizing and emits the correct events', () => {
+  it("collapses and un-collapses during resizing and emits the correct events", () => {
     const collapses: boolean[] = [];
     const heightChanges: number[] = [];
     const sizeChanges: number[] = [];
-    toDispose.push(ba.addListeners({
-      height: (value) => {
-        heightChanges.push(value);
-      },
-      resize: (value) => {
-        sizeChanges.push(value);
-      },
-      collapsed: (value) => {
-        collapses.push(value);
-      },
-    }));
+    toDispose.push(
+      ba.addListeners({
+        height: value => {
+          heightChanges.push(value);
+        },
+        resize: value => {
+          sizeChanges.push(value);
+        },
+        collapsed: value => {
+          collapses.push(value);
+        }
+      })
+    );
 
     expect(ba.isCollapsed).to.eq(true);
 
@@ -190,8 +197,8 @@ describe.only('Split', () => {
     expect(sizeChanges).to.deep.eq([15, 0]);
   });
 
-  it('resizes correctly', () => {
-    root.set('height', 80);
+  it("resizes correctly", () => {
+    root.set("height", 80);
     expect(root.sizes.height).to.eq(80);
     expect(a.sizes.height).to.eq(80);
     expect(aa.sizes.height).to.eq(25);
