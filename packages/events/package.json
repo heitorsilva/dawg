@@ -1,0 +1,23 @@
+{
+  "name": "@dawg/events",
+  "version": "0.1.0",
+  "description": "Better TS events!",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "typescript": "3.5.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dawg/vusic.git"
+  },
+  "keywords": [
+    "events",
+    "typescript"
+  ],
+  "author": "Jacob Smith",
+  "license": "MIT"
+}

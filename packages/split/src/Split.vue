@@ -13,8 +13,7 @@
 
 <script lang="ts">
 import { watch, Ref, ref, createComponent, computed, onMounted, onUnmounted } from '@vue/composition-api';
-import { update } from '@/utils';
-import { Direction, Section, isSplit } from '@/modules/split/helper';
+import { Direction, Section, isSplit } from './helper';
 
 export default createComponent({
   name: 'Split',
@@ -124,10 +123,10 @@ export default createComponent({
           }
         },
         resize: (size) => {
-          update(props, context, 'initial', size);
+          context.emit('update:initial', size);
         },
         collapsed: (value) => {
-          update(props, context, 'collapsed', value);
+          context.emit('update:collapsed', value);
         },
       });
 

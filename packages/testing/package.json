@@ -1,0 +1,22 @@
+{
+  "name": "@dawg/testing",
+  "version": "0.1.0",
+  "description": "A better testing API!",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "typescript": "3.5.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dawg/vusic.git"
+  },
+  "keywords": [
+    "testing",
+    "typescript"
+  ],
+  "author": "Jacob Smith",
+  "license": "MIT"
+}

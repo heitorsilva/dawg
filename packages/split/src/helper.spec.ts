@@ -2,12 +2,11 @@ import Vue from 'vue';
 import VueCompositionApi from '@vue/composition-api';
 Vue.use(VueCompositionApi);
 
-import { expect } from '@/testing';
-import { Section, SectionOpts } from '@/modules/split/helper';
+import { expect } from '@dawg/testing';
+import { Section, SectionOpts } from './helper';
 
 
-
-const create = ( o?: SectionOpts) => {
+const create = (o?: SectionOpts) => {
   return new Section(o);
 };
 

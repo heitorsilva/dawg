@@ -1,0 +1,52 @@
+Arguments: 
+  /Users/jacob/.nvm/versions/node/v11.14.0/bin/node /usr/local/Cellar/yarn/1.21.1/libexec/bin/yarn.js install
+
+PATH: 
+  /Users/jacob/Library/Python/3.7/bin:/Users/jacob/.nvm/versions/node/v11.14.0/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Users/jacob/Library/Python/3.7/bin:/Users/jacob/.nvm/versions/node/v11.14.0/bin
+
+Yarn version: 
+  1.21.1
+
+Node version: 
+  11.14.0
+
+Platform: 
+  darwin x64
+
+Trace: 
+  SyntaxError: /Users/jacob/git/vusic/packages/testing/package.json: Unexpected token } in JSON at position 440
+      at JSON.parse (<anonymous>)
+      at /usr/local/Cellar/yarn/1.21.1/libexec/lib/cli.js:1625:59
+      at Generator.next (<anonymous>)
+      at step (/usr/local/Cellar/yarn/1.21.1/libexec/lib/cli.js:310:30)
+      at /usr/local/Cellar/yarn/1.21.1/libexec/lib/cli.js:321:13
+
+npm manifest: 
+  {
+    "name": "@dawg/testing",
+    "version": "0.1.0",
+    "description": "A better testing API!",
+    "main": "index.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "devDependencies": {
+      "typescript": "3.5.3"
+    },
+    "repository": {
+      "type": "git",
+      "url": "git+https://github.com/dawg/vusic.git"
+    },
+    "keywords": [
+      "testing",
+      "typescript"
+    ],
+    "author": "Jacob Smith",
+    "license": "MIT",
+  }
+
+yarn manifest: 
+  No manifest
+
+Lockfile: 
+  No lockfile
