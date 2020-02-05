@@ -9,6 +9,9 @@ import sequencer from '@/modules/sequencer';
 import DragNDrop from '@/modules/dragndrop';
 import Draggable from '@/modules/draggable';
 import Knobs from '@/modules/knobs';
+import VueCompositionApi from '@vue/composition-api';
+Vue.use(VueCompositionApi);
+
 import Split from '@dawg/split';
 
 const middleware = () => {
