@@ -1,6 +1,6 @@
 import * as t from '@/modules/io';
 import * as Audio from '@/modules/audio';
-import { StrictEventEmitter } from '@/events';
+import { StrictEventEmitter } from '@dawg/events';
 import { Beat } from '@/modules/audio/types';
 import * as history from '@/dawg/extensions/core/project/history';
 

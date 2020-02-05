@@ -9,7 +9,7 @@ import sequencer from '@/modules/sequencer';
 import DragNDrop from '@/modules/dragndrop';
 import Draggable from '@/modules/draggable';
 import Knobs from '@/modules/knobs';
-import Split from '@/modules/split';
+import Split from '@dawg/split';
 
 const middleware = () => {
   // This imports all .vue files in the components folder

@@ -1,7 +1,7 @@
 import Tone from 'tone';
 import { Ticks, Beat } from '@/modules/audio/types';
 import { ref } from '@vue/composition-api';
-import { emitter } from '@/events';
+import { emitter } from '@dawg/events';
 
 class Ticker {
   private worker: Worker;

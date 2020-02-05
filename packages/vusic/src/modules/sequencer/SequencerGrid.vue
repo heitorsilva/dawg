@@ -114,11 +114,12 @@
 
 <script lang="ts">
 import { Component, Prop, Mixins, Inject, Vue } from 'vue-property-decorator';
-import { range, Nullable, Keys, reverse, addEventListeners } from '@/utils';
+import { range, Nullable, Keys, reverse } from '@/utils';
 import BeatLines from '@/modules/sequencer/BeatLines';
 import Progression from '@/modules/sequencer/Progression.vue';
 import ElementWrapper from '@/modules/sequencer/ElementWrapper.vue';
 import { Watch } from '@/modules/update';
+import { addEventListeners } from '@dawg/events';
 import { Schedulable, Sequence } from '@/core';
 import { Ghost } from '@/core/ghost';
 

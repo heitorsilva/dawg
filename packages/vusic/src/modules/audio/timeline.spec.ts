@@ -1,4 +1,4 @@
-import { expect } from '@/testing';
+import { expect } from '@dawg/testing';
 import { Timeline } from '@/modules/audio/timeline';
 
 describe(Timeline.name, () => {

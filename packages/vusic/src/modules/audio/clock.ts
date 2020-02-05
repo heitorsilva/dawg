@@ -2,7 +2,7 @@ import Tone from 'tone';
 import { Context } from '@/modules/audio/context';
 import { ContextTime, Ticks } from '@/modules/audio/types';
 import { TickSource } from '@/modules/audio/tick-source';
-import { StrictEventEmitter } from '@/events';
+import { StrictEventEmitter } from '@dawg/events';
 
 interface ClockOptions {
   callback: (seconds: ContextTime, ticks: Ticks) => void;

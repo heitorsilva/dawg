@@ -3,7 +3,7 @@ import { ContextTime, Ticks, Seconds, Beat } from '@/modules/audio/types';
 import { Context } from '@/modules/audio/context';
 import { watch } from '@vue/composition-api';
 import { Clock } from '@/modules/audio/clock';
-import { StrictEventEmitter } from '@/events';
+import { StrictEventEmitter } from '@dawg/events';
 
 interface EventContext {
   seconds: ContextTime;

@@ -199,7 +199,7 @@ export default createComponent({
 });
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .gutter {
   left: 0;
   top: 0;

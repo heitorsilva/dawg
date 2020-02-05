@@ -3,10 +3,17 @@
   "compilerOptions": {
     "baseUrl": ".",
     "types": ["mocha"],
+    "outDir": "t-dist",
     "paths": {
       "@/*": [
         "src/*"
       ]
     }
-  }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.vue",
+    "src/**/*.d.ts"
+  ]
 }

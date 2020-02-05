@@ -1,4 +1,4 @@
-import * as events from '@/events';
+import * as events from '@dawg/events';
 
 export interface PaletteOptions {
   placeholder?: string;

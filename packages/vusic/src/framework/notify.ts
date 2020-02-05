@@ -1,4 +1,4 @@
-import { emitter } from '@/events';
+import { emitter } from '@dawg/events';
 
 export const events = emitter<{ add: [Notification] }>();
 

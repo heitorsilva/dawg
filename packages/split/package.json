@@ -1,12 +1,12 @@
 {
-  "name": "@dawgjs/split",
+  "name": "@dawg/split",
   "version": "0.1.0",
   "description": "Help layout your app!",
-  "main": "dist/index.js",
+  "main": "dist/index.common.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
+    "build": "tsc && vue-cli-service build --target lib --name index ./src/index.ts && mv t-dist/index.d.ts dist && rm -rf t-dist",
     "test:unit": "vue-cli-service test:unit src/**/*.spec.ts",
     "lint": "vue-cli-service lint"
   },

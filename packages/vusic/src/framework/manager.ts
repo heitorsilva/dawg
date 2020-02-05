@@ -17,7 +17,7 @@ import { reverse, keys } from '@/utils';
 import uuid from 'uuid';
 import { ref } from '@vue/composition-api';
 import { PathReporter } from 'io-ts/lib/PathReporter';
-import { emitter } from '@/events';
+import { emitter } from '@dawg/events';
 import { decodeItem } from '@/modules/io';
 
 const events = emitter<{ setOpenedFile: [] }>();
