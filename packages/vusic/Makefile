@@ -1,11 +1,11 @@
 dev:
-	yarn run serve
+	npm run serve
 
 test:
-	yarn run test:unit
+	npm run test:unit
 
 watch:
 	npx vue-cli-service test:unit --watch
 
 build:
-	yarn run build
+	npm run build
